@@ -1,0 +1,27 @@
+{
+  "name": "PAKT - Lunch. Chores. Done.",
+  "short_name": "PAKT",
+  "description": "The smart lunchbox planner for Aussie families. Lunch. Chores. Done.",
+  "id": "pakt-lunchbox-app",
+  "start_url": "https://getpakt.app/",
+  "scope": "https://getpakt.app/",
+  "display": "standalone",
+  "background_color": "#FFF7ED",
+  "theme_color": "#F97316",
+  "orientation": "portrait-primary",
+  "categories": ["food", "lifestyle", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thank You! - PAKT</title>
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+      padding: 40px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+    .emoji { font-size: 64px; margin-bottom: 20px; }
+    h1 { color: #1F2937; margin-bottom: 10px; font-size: 28px; }
+    .subtitle { color: #6B7280; margin-bottom: 30px; }
+    .license-box {
+      background: #F0FDF4;
+      border: 2px solid #22C55E;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .license-label { color: #16A34A; font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+    .license-key {
+      font-family: monospace;
+      font-size: 24px;
+      font-weight: bold;
+      color: #1F2937;
+      letter-spacing: 2px;
+      word-break: break-all;
+    }
+    .copy-btn {
+      background: #22C55E;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: background 0.2s;
+    }
+    .copy-btn:hover { background: #16A34A; }
+    .copy-btn.copied { background: #6B7280; }
+    .instructions {
+      background: #FFF7ED;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 25px;
+      text-align: left;
+    }
+    .instructions h3 { color: #C2410C; margin-bottom: 12px; font-size: 16px; }
+    .instructions ol { color: #6B7280; padding-left: 20px; line-height: 1.8; }
+    .loading { color: #6B7280; }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #E5E7EB;
+      border-top-color: #F97316;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error { color: #DC2626; margin-bottom: 15px; }
+    .home-link {
+      display: inline-block;
+      margin-top: 25px;
+      color: #F97316;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .home-link:hover { text-decoration: underline; }
+    .email-lookup {
+      background: #F3F4F6;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      text-align: left;
+    }
+    .email-lookup h3 { color: #374151; margin-bottom: 12px; font-size: 16px; }
+    .email-input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #D1D5DB;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    .email-input:focus {
+      outline: none;
+      border-color: #F97316;
+    }
+    .lookup-btn {
+      background: #F97316;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+    }
+    .lookup-btn:hover { background: #EA580C; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="loading">
+      <div class="emoji">⏳</div>
+      <h1>Processing Payment...</h1>
+      <p class="subtitle">Please wait while we generate your license key</p>
+      <div class="spinner"></div>
+    </div>
+    
+    <div id="success" style="display: none;">
+      <div class="emoji">🎉</div>
+      <h1>Thank You!</h1>
+      <p class="subtitle">Your PAKT license is ready</p>
+      
+      <div class="license-box">
+        <div class="license-label">YOUR LICENSE KEY</div>
+        <div class="license-key" id="license-key"></div>
+        <button class="copy-btn" onclick="copyKey()">📋 Copy Key</button>
+      </div>
+      
+      <div class="instructions">
+        <h3>📱 How to Activate</h3>
+        <ol>
+          <li>Open PAKT on your device</li>
+          <li>Tap "Enter License Key"</li>
+          <li>Paste your key above</li>
+          <li>Enjoy PAKT! 🍱</li>
+        </ol>
+      </div>
+      
+      <p style="color: #6B7280; font-size: 14px; margin-top: 20px;">
+        A copy has been sent to <strong id="email-display"></strong>
+      </p>
+      
+      <a href="https://getpakt.app" class="home-link">← Back to PAKT</a>
+    </div>
+    
+    <div id="error" style="display: none;">
+      <div class="emoji">😕</div>
+      <h1>Retrieving Your License</h1>
+      <p class="error" id="error-message"></p>
+      
+      <div class="email-lookup">
+        <h3>🔍 Find your license by email</h3>
+        <p style="color: #6B7280; font-size: 14px; margin-bottom: 12px;">
+          Enter the email you used for payment:
+        </p>
+        <input type="email" id="email-input" class="email-input" placeholder="your@email.com">
+        <button class="lookup-btn" onclick="lookupByEmail()">Find My License</button>
+        <p id="lookup-error" style="color: #DC2626; font-size: 14px; margin-top: 10px; display: none;"></p>
+      </div>
+      
+      <p style="color: #6B7280; font-size: 14px; margin-top: 20px;">
+        Still having trouble? Contact <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="06757376766974724661637276676d7228677676">[email&#160;protected]</a></strong>
+      </p>
+      
+      <a href="https://getpakt.app" class="home-link">← Back to PAKT</a>
+    </div>
+  </div>
+  
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    const API_URL = 'https://pakt-api.oliveri-john001.workers.dev';
+    
+    async function checkLicense() {
+      const params = new URLSearchParams(window.location.search);
+      const sessionId = params.get('session_id');
+      
+      console.log('Session ID from URL:', sessionId);
+      
+      if (!sessionId) {
+        console.log('No session ID - showing email lookup');
+        showError('No session ID in URL - use email lookup below');
+        return;
+      }
+      
+      // Poll for license (webhook might take a moment)
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      const poll = async () => {
+        try {
+          const url = `${API_URL}/success?session_id=${encodeURIComponent(sessionId)}`;
+          console.log('Polling:', url);
+          
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          console.log('Response:', data);
+          
+          if (data.success && data.licenseKey) {
+            showSuccess(data.licenseKey, data.email);
+          } else if (attempts < maxAttempts) {
+            attempts++;
+            console.log(`Attempt ${attempts}/${maxAttempts} - retrying...`);
+            setTimeout(poll, 2000);
+          } else {
+            showError('Could not find license automatically - use email lookup below');
+          }
+        } catch (err) {
+          console.error('Fetch error:', err);
+          if (attempts < maxAttempts) {
+            attempts++;
+            setTimeout(poll, 2000);
+          } else {
+            showError('Connection issue - use email lookup below');
+          }
+        }
+      };
+      
+      poll();
+    }
+    
+    async function lookupByEmail() {
+      const email = document.getElementById('email-input').value.trim();
+      const errorEl = document.getElementById('lookup-error');
+      
+      if (!email) {
+        errorEl.textContent = 'Please enter your email';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      errorEl.style.display = 'none';
+      
+      try {
+        const response = await fetch(`${API_URL}/lookup?email=${encodeURIComponent(email)}`);
+        const data = await response.json();
+        
+        console.log('Lookup response:', data);
+        
+        if (data.found && data.key) {
+          showSuccess(data.key, email);
+        } else {
+          errorEl.textContent = 'No license found for this email. Check spelling or contact support.';
+          errorEl.style.display = 'block';
+        }
+      } catch (err) {
+        console.error('Lookup error:', err);
+        errorEl.textContent = 'Connection error. Please try again.';
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    function showSuccess(key, email) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error').style.display = 'none';
+      document.getElementById('success').style.display = 'block';
+      document.getElementById('license-key').textContent = key;
+      document.getElementById('email-display').textContent = email || 'your email';
+    }
+    
+    function showError(message) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('success').style.display = 'none';
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error-message').textContent = message;
+    }
+    
+    function copyKey() {
+      const key = docu
