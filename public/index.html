@@ -883,7 +883,7 @@ const TutorialOverlay = ({ steps, currentStep, onNext, onPrev, onClose }) => {
       
       {/* Tutorial card with Benny */}
       <div 
-        className="fixed bg-white rounded-3xl shadow-2xl p-5 max-w-md w-[calc(100%-2rem)] z-[102] transition-all duration-300"
+        className="fixed bg-white rounded-3xl shadow-2xl p-4 sm:p-5 max-w-md w-[calc(100%-1.5rem)] z-[102] transition-all duration-300"
         style={getCardStyle()}
       >
         <div className="flex items-start gap-4">
@@ -892,7 +892,7 @@ const TutorialOverlay = ({ steps, currentStep, onNext, onPrev, onClose }) => {
             <h3 className="font-bold text-lg text-gray-800 mb-2" style={{ fontFamily: 'Fredoka, sans-serif' }}>
               {step.title}
             </h3>
-            <p className="text-gray-600 text-sm mb-4">{step.description}</p>
+            <p className="text-gray-600 text-xs sm:text-sm mb-4 max-h-24 overflow-y-auto">{step.description}</p>
             
             {/* Progress dots */}
             <div className="flex items-center justify-between">
@@ -973,7 +973,7 @@ const TUTORIAL_STEPS = {
     { id: 'install-app', title: '📲 Install the App', description: 'Tap the blue Install button to add PAKT to your home screen. It works offline and feels like a real app!', target: null },
     { id: 'add-child', title: 'Add Your Kids', description: 'Start by tapping "+ Add Child" to create a profile. You can add their photo, allergies, dietary preferences, and food dislikes!', target: 'add-child-btn' },
     { id: 'select-child', title: 'Select a Child', description: 'Tap on a child\'s card to select them, then you\'ll see their weekly lunch planner.', target: 'child-cards' },
-    { id: 'points-system', title: '⭐ Points System', description: 'Kids earn points for healthy foods! Protein = +20 pts, Veggies = +15 pts, Dairy = +12 pts, Fruit = +10 pts, Grains = +5 pts. Sweets cost -20 pts. Trying disliked foods = +25 bonus!', target: null },
+    { id: 'points-system', title: '⭐ Points System', description: 'Kids earn points for healthy foods! Protein +20, Veggies +15, Dairy +12, Fruit +10, Grains +5. Sweets -20 pts. Bonus: +25 for trying disliked foods!', target: null },
     { id: 'rewards', title: '🏆 Custom Rewards', description: 'Create your own rewards for your kids to earn with their points! Tap the Rewards button to set up rewards like "iPad time" or "Movie night". The app suggests point ranges based on what kids typically earn.', target: 'rewards-btn' },
     { id: 'chores', title: '🧹 Chores Tracker', description: 'Add chores to each child profile and track them daily! Kids earn points for completing chores. If a sibling helps, they get a 25% kindness bonus!', target: null },
     { id: 'parent-battle', title: '👩 vs 👨 Parent Battle!', description: 'Track who makes each lunch with the Mum/Dad buttons on each day. At the end of the week, see who packed more lunches - friendly competition makes it fun! 😏', target: null },
