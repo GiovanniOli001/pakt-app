@@ -2550,12 +2550,155 @@ const BentoLayoutDesigner = ({ initialLayout, onSave, onClose }) => {
 };
 
 // Food Selector Modal - appears when tapping a bento compartment
-const FoodSelectorModal = ({ category, child, selectedItems, onSelect, onClose, dietaryFilter }) => {
+
+// Emoji picker for custom foods
+const FOOD_EMOJIS = [
+  // Grains & Carbs
+  '🍞', '🥖', '🥐', '🥯', '🥨', '🥪', '🌮', '🌯', '🥙', '🧇', '🥞', '🍕', 
+  '🍝', '🍜', '🍲', '🍛', '🍚', '🍙', '🍘', '🥟', '🥠', '🥡',
+  // Protein
+  '🥩', '🍖', '🍗', '🥓', '🌭', '🍔', '🍳', '🥚', '🧆', '🥜',
+  // Dairy
+  '🧀', '🥛', '🧈', '🍦', '🍨', '🧁', '🍰',
+  // Fruits
+  '🍎', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍒', '🍑', '🥭', '🍍', '🥝', '🍐', '🍏',
+  // Vegetables
+  '🥕', '🥦', '🥬', '🥒', '🌽', '🫑', '🌶️', '🍅', '🥗', '🥔', '🍠', '🧅', '🧄', '🥑', '🫛',
+  // Snacks & Sweets
+  '🍪', '🍩', '🧁', '🍫', '🍬', '🍭', '🍿', '🥮', '🍯',
+  // Drinks
+  '🧃', '🥤', '🧋', '☕', '🍵',
+  // Other foods
+  '🥗', '🥣', '🫕', '🍱', '🥫', '🫙', '🥜', '🌰'
+];
+
+// Custom Food Modal for adding/editing custom food items
+const CustomFoodModal = ({ category, editItem, onSave, onClose }) => {
+  const [name, setName] = useState(editItem?.name || '');
+  const [emoji, setEmoji] = useState(editItem?.emoji || FOOD_EMOJIS[0]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  
+  const catData = FOOD_DATABASE[category];
+  const categoryPointValue = CATEGORY_POINTS[category] || 0;
+  
+  const handleSave = () => {
+    if (!name.trim()) return;
+    
+    onSave({
+      id: editItem?.id || `custom-${Date.now()}`,
+      name: name.trim(),
+      emoji: emoji,
+      isCustom: true,
+      points: categoryPointValue
+    });
+    onClose();
+  };
+  
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4" onClick={onClose}>
+      <div 
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div 
+          className="p-4 text-white"
+          style={{ background: `linear-gradient(135deg, ${catData.color}, ${catData.color}cc)` }}
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">
+              {editItem ? '✏️ Edit Item' : '➕ Add Custom Item'}
+            </h2>
+            <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-full">✕</button>
+          </div>
+          <p className="text-white/80 text-sm mt-1">to {catData.name}</p>
+        </div>
+        
+        {/* Form */}
+        <div className="p-4 space-y-4">
+          {/* Emoji selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Icon</label>
+            <button
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="w-full p-3 border-2 border-gray-200 rounded-xl flex items-center justify-between hover:border-gray-300 transition-all"
+            >
+              <span className="text-3xl">{emoji}</span>
+              <span className="text-gray-400 text-sm">Tap to change</span>
+            </button>
+            
+            {showEmojiPicker && (
+              <div className="mt-2 p-3 bg-gray-50 rounded-xl border max-h-40 overflow-y-auto">
+                <div className="grid grid-cols-8 gap-1">
+                  {FOOD_EMOJIS.map((e, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { setEmoji(e); setShowEmojiPicker(false); }}
+                      className={`text-2xl p-1 rounded hover:bg-gray-200 transition-all ${emoji === e ? 'bg-orange-100 ring-2 ring-orange-400' : ''}`}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Name input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Pasta Bolognese"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 focus:outline-none text-lg"
+              autoFocus
+            />
+          </div>
+          
+          {/* Points info */}
+          <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <span className="text-gray-600 text-sm">
+              This item will earn <span className="font-bold text-orange-500">{categoryPointValue >= 0 ? '+' : ''}{categoryPointValue} pts</span>
+            </span>
+          </div>
+        </div>
+        
+        {/* Footer */}
+        <div className="p-4 bg-gray-50 border-t flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 text-gray-600 font-bold hover:bg-gray-200 rounded-xl transition-all"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!name.trim()}
+            className="flex-1 py-3 text-white font-bold rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: name.trim() ? `linear-gradient(135deg, ${catData.color}, ${catData.color}cc)` : '#ccc' }}
+          >
+            {editItem ? 'Save' : 'Add Item'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FoodSelectorModal = ({ category, child, selectedItems, onSelect, onClose, dietaryFilter, customFoods, onAddCustomFood, onEditCustomFood, onDeleteCustomFood }) => {
   const catData = FOOD_DATABASE[category];
   const [localSelection, setLocalSelection] = useState(selectedItems || []);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [editingCustomItem, setEditingCustomItem] = useState(null);
   
-  // Apply dietary filter to items
+  // Get custom foods for this category
+  const categoryCustomFoods = customFoods?.[category] || [];
+  
+  // Apply dietary filter to items and combine with custom foods
   const filteredItems = dietaryFilter ? dietaryFilter(catData.items) : catData.items;
+  const allItems = [...categoryCustomFoods, ...filteredItems];
   
   // Max items: drinks=1, sweets based on points (reward system!), others=3
   const getMaxItems = () => {
@@ -2703,10 +2846,36 @@ const FoodSelectorModal = ({ category, child, selectedItems, onSelect, onClose, 
           </div>
         )}
 
+        {/* Custom Food Modal */}
+        {showCustomModal && (
+          <CustomFoodModal
+            category={category}
+            editItem={editingCustomItem}
+            onSave={(item) => {
+              if (editingCustomItem) {
+                onEditCustomFood(category, item);
+              } else {
+                onAddCustomFood(category, item);
+              }
+              setEditingCustomItem(null);
+            }}
+            onClose={() => { setShowCustomModal(false); setEditingCustomItem(null); }}
+          />
+        )}
+
         {/* Food options grid - Scrollable */}
         <div className="flex-1 overflow-y-auto min-h-0 p-4">
+          {/* Add Custom Item Button */}
+          <button
+            onClick={() => { setEditingCustomItem(null); setShowCustomModal(true); }}
+            className="w-full mb-4 p-3 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center gap-2 text-gray-500 hover:border-orange-400 hover:text-orange-500 hover:bg-orange-50 transition-all"
+          >
+            <span className="text-xl">➕</span>
+            <span className="font-medium">Add Custom Item</span>
+          </button>
+
           <div className="grid grid-cols-3 gap-3">
-            {filteredItems.map(item => {
+            {allItems.map(item => {
               const allergenDisabled = isItemDisabled(item);
               const selected = localSelection.find(i => i.id === item.id);
               const capacityDisabled = atMaxCapacity && !selected;
@@ -2752,6 +2921,28 @@ const FoodSelectorModal = ({ category, child, selectedItems, onSelect, onClose, 
                   {allergenDisabled && (
                     <div className="text-xs text-red-500 font-medium mt-1">
                       ⚠️ Allergen
+                    </div>
+                  )}
+                  {/* Edit/Delete for custom items */}
+                  {item.isCustom && !selected && (
+                    <div className="absolute top-1 right-1 flex gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEditingCustomItem(item); setShowCustomModal(true); }}
+                        className="w-6 h-6 bg-white/90 hover:bg-blue-100 rounded-full flex items-center justify-center shadow text-xs"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          if (confirm('Delete ' + item.name + '?')) {
+                            onDeleteCustomFood(category, item.id);
+                          }
+                        }}
+                        className="w-6 h-6 bg-white/90 hover:bg-red-100 rounded-full flex items-center justify-center shadow text-xs"
+                      >
+                        🗑️
+                      </button>
                     </div>
                   )}
                 </button>
@@ -7055,6 +7246,39 @@ function LunchboxApp() {
   useEffect(() => {
     localStorage.setItem('lunchbox-custom-rewards', JSON.stringify(customRewards));
   }, [customRewards]);
+
+  // Custom Foods state - allows users to add their own food items
+  const [customFoods, setCustomFoods] = useState(() => {
+    const saved = localStorage.getItem('lunchbox-custom-foods');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  // Save customFoods to localStorage
+  useEffect(() => {
+    localStorage.setItem('lunchbox-custom-foods', JSON.stringify(customFoods));
+  }, [customFoods]);
+
+  // Custom food handlers
+  const handleAddCustomFood = (category, item) => {
+    setCustomFoods(prev => ({
+      ...prev,
+      [category]: [...(prev[category] || []), item]
+    }));
+  };
+
+  const handleEditCustomFood = (category, item) => {
+    setCustomFoods(prev => ({
+      ...prev,
+      [category]: (prev[category] || []).map(f => f.id === item.id ? item : f)
+    }));
+  };
+
+  const handleDeleteCustomFood = (category, itemId) => {
+    setCustomFoods(prev => ({
+      ...prev,
+      [category]: (prev[category] || []).filter(f => f.id !== itemId)
+    }));
+  };
   
   // Chore management functions
   const handleAddChore = (childId, chore) => {
@@ -7305,6 +7529,7 @@ function LunchboxApp() {
     localStorage.removeItem('lunchbox-todos-checked');
     localStorage.removeItem('lunchbox-week-progress');
     localStorage.removeItem('lunchbox-custom-rewards');
+    localStorage.removeItem('lunchbox-custom-foods');
     localStorage.removeItem('lunchbox-chore-progress');
     
     // Close modals
@@ -8014,6 +8239,10 @@ function LunchboxApp() {
           onSelect={handleSelectFood}
           onClose={() => setSelectedCategory(null)}
           dietaryFilter={filterByDietaryMode}
+          customFoods={customFoods}
+          onAddCustomFood={handleAddCustomFood}
+          onEditCustomFood={handleEditCustomFood}
+          onDeleteCustomFood={handleDeleteCustomFood}
         />
       )}
       
