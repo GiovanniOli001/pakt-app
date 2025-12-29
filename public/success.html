@@ -78,7 +78,6 @@
       margin: 20px auto;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .error { color: #DC2626; margin-bottom: 15px; }
     .home-link {
       display: inline-block;
       margin-top: 25px;
@@ -88,13 +87,14 @@
     }
     .home-link:hover { text-decoration: underline; }
     .email-lookup {
-      background: #F3F4F6;
+      background: #EFF6FF;
+      border: 2px solid #3B82F6;
       border-radius: 12px;
       padding: 20px;
       margin-top: 20px;
       text-align: left;
     }
-    .email-lookup h3 { color: #374151; margin-bottom: 12px; font-size: 16px; }
+    .email-lookup h3 { color: #1D4ED8; margin-bottom: 12px; font-size: 16px; }
     .email-input {
       width: 100%;
       padding: 12px;
@@ -105,10 +105,10 @@
     }
     .email-input:focus {
       outline: none;
-      border-color: #F97316;
+      border-color: #3B82F6;
     }
     .lookup-btn {
-      background: #F97316;
+      background: #3B82F6;
       color: white;
       border: none;
       padding: 12px 24px;
@@ -118,7 +118,18 @@
       cursor: pointer;
       width: 100%;
     }
-    .lookup-btn:hover { background: #EA580C; }
+    .lookup-btn:hover { background: #2563EB; }
+    .lookup-btn:disabled { background: #9CA3AF; cursor: not-allowed; }
+    .status-text { 
+      font-size: 14px; 
+      color: #6B7280; 
+      margin-top: 15px;
+    }
+    .attempt-counter {
+      font-size: 12px;
+      color: #9CA3AF;
+      margin-top: 5px;
+    }
   </style>
 </head>
 <body>
@@ -128,6 +139,19 @@
       <h1>Processing Payment...</h1>
       <p class="subtitle">Please wait while we generate your license key</p>
       <div class="spinner"></div>
+      <p class="status-text" id="status-text">Connecting to server...</p>
+      <p class="attempt-counter" id="attempt-counter"></p>
+      
+      <!-- Show email lookup while waiting -->
+      <div class="email-lookup" style="margin-top: 30px;">
+        <h3>⚡ Get your key instantly</h3>
+        <p style="color: #6B7280; font-size: 14px; margin-bottom: 12px;">
+          Enter your payment email - no need to wait!
+        </p>
+        <input type="email" id="email-input-loading" class="email-input" placeholder="your@email.com">
+        <button class="lookup-btn" onclick="lookupByEmail('email-input-loading')">🔍 Find My License</button>
+        <p id="lookup-error-loading" style="color: #DC2626; font-size: 14px; margin-top: 10px; display: none;"></p>
+      </div>
     </div>
     
     <div id="success" style="display: none;">
@@ -159,29 +183,29 @@
     </div>
     
     <div id="error" style="display: none;">
-      <div class="emoji">😕</div>
-      <h1>Retrieving Your License</h1>
-      <p class="error" id="error-message"></p>
+      <div class="emoji">🔍</div>
+      <h1>Find Your License</h1>
+      <p class="subtitle">Auto-lookup timed out - use email instead</p>
       
       <div class="email-lookup">
-        <h3>🔍 Find your license by email</h3>
+        <h3>📧 Enter your payment email</h3>
         <p style="color: #6B7280; font-size: 14px; margin-bottom: 12px;">
-          Enter the email you used for payment:
+          We'll find your license key instantly:
         </p>
-        <input type="email" id="email-input" class="email-input" placeholder="your@email.com">
-        <button class="lookup-btn" onclick="lookupByEmail()">Find My License</button>
-        <p id="lookup-error" style="color: #DC2626; font-size: 14px; margin-top: 10px; display: none;"></p>
+        <input type="email" id="email-input-error" class="email-input" placeholder="your@email.com">
+        <button class="lookup-btn" onclick="lookupByEmail('email-input-error')">Find My License</button>
+        <p id="lookup-error-error" style="color: #DC2626; font-size: 14px; margin-top: 10px; display: none;"></p>
       </div>
       
       <p style="color: #6B7280; font-size: 14px; margin-top: 20px;">
-        Still having trouble? Contact <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="06757376766974724661637276676d7228677676">[email&#160;protected]</a></strong>
+        Still having trouble? Contact <strong>support@getpakt.app</strong>
       </p>
       
       <a href="https://getpakt.app" class="home-link">← Back to PAKT</a>
     </div>
   </div>
   
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  <script>
     const API_URL = 'https://pakt-api.oliveri-john001.workers.dev';
     
     async function checkLicense() {
@@ -192,16 +216,21 @@
       
       if (!sessionId) {
         console.log('No session ID - showing email lookup');
-        showError('No session ID in URL - use email lookup below');
+        showError();
         return;
       }
       
-      // Poll for license (webhook might take a moment)
+      // Poll for license - more attempts, longer wait
       let attempts = 0;
-      const maxAttempts = 10;
+      const maxAttempts = 15; // Increased from 10
+      const statusText = document.getElementById('status-text');
+      const attemptCounter = document.getElementById('attempt-counter');
       
       const poll = async () => {
         try {
+          statusText.textContent = 'Looking up your license...';
+          attemptCounter.textContent = `Attempt ${attempts + 1} of ${maxAttempts}`;
+          
           const url = `${API_URL}/success?session_id=${encodeURIComponent(sessionId)}`;
           console.log('Polling:', url);
           
@@ -214,18 +243,21 @@
             showSuccess(data.licenseKey, data.email);
           } else if (attempts < maxAttempts) {
             attempts++;
-            console.log(`Attempt ${attempts}/${maxAttempts} - retrying...`);
-            setTimeout(poll, 2000);
+            statusText.textContent = 'Payment confirmed - generating license...';
+            // Longer delays: 1s, 2s, 2s, 3s, 3s... 
+            const delay = attempts <= 2 ? 1000 : attempts <= 5 ? 2000 : 3000;
+            setTimeout(poll, delay);
           } else {
-            showError('Could not find license automatically - use email lookup below');
+            showError();
           }
         } catch (err) {
           console.error('Fetch error:', err);
           if (attempts < maxAttempts) {
             attempts++;
+            statusText.textContent = 'Retrying...';
             setTimeout(poll, 2000);
           } else {
-            showError('Connection issue - use email lookup below');
+            showError();
           }
         }
       };
@@ -233,9 +265,11 @@
       poll();
     }
     
-    async function lookupByEmail() {
-      const email = document.getElementById('email-input').value.trim();
-      const errorEl = document.getElementById('lookup-error');
+    async function lookupByEmail(inputId) {
+      const input = document.getElementById(inputId);
+      const email = input.value.trim();
+      const errorElId = inputId.replace('email-input', 'lookup-error');
+      const errorEl = document.getElementById(errorElId);
       
       if (!email) {
         errorEl.textContent = 'Please enter your email';
@@ -243,6 +277,10 @@
         return;
       }
       
+      // Disable button while loading
+      const btn = input.nextElementSibling;
+      btn.disabled = true;
+      btn.textContent = '⏳ Searching...';
       errorEl.style.display = 'none';
       
       try {
@@ -254,13 +292,17 @@
         if (data.found && data.key) {
           showSuccess(data.key, email);
         } else {
-          errorEl.textContent = 'No license found for this email. Check spelling or contact support.';
+          errorEl.textContent = 'No license found for this email. Check spelling or contact support@getpakt.app';
           errorEl.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = '🔍 Find My License';
         }
       } catch (err) {
         console.error('Lookup error:', err);
         errorEl.textContent = 'Connection error. Please try again.';
         errorEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '🔍 Find My License';
       }
     }
     
@@ -272,12 +314,27 @@
       document.getElementById('email-display').textContent = email || 'your email';
     }
     
-    function showError(message) {
+    function showError() {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('success').style.display = 'none';
       document.getElementById('error').style.display = 'block';
-      document.getElementById('error-message').textContent = message;
     }
     
     function copyKey() {
-      const key = docu
+      const key = document.getElementById('license-key').textContent;
+      navigator.clipboard.writeText(key).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = '✓ Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = '📋 Copy Key';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+    
+    // Start checking on page load
+    checkLicense();
+  </script>
+</body>
+</html>
