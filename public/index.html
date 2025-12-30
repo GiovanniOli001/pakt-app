@@ -100,6 +100,7 @@ const APP_VERSION = '0.6.0';
 const DIETARY_MODES = {
   none: { name: 'No Filter', icon: '🍽️', excludeAllergens: [], excludeCategories: [] },
   vegetarian: { name: 'Vegetarian', icon: '🥬', excludeAllergens: [], excludeItems: ['chicken', 'beef', 'lamb', 'pork', 'fish', 'prawn', 'tuna', 'salmon', 'ham', 'salami', 'bacon', 'meatball', 'sausage', 'frankfurt', 'turkey', 'roast', 'drumstick', 'wing', 'meat', 'steak', 'mince', 'schnitzel'] },
+  vegan: { name: 'Vegan', icon: '🌱', excludeAllergens: ['dairy', 'eggs'], excludeItems: ['chicken', 'beef', 'lamb', 'pork', 'fish', 'prawn', 'tuna', 'salmon', 'ham', 'salami', 'bacon', 'meatball', 'sausage', 'frankfurt', 'turkey', 'roast', 'drumstick', 'wing', 'meat', 'steak', 'mince', 'schnitzel', 'cheese', 'yogurt', 'milk', 'cream', 'butter', 'egg', 'honey', 'mayo', 'mayonnaise'] },
   halal: { name: 'Halal', icon: '☪️', excludeAllergens: [], excludeItems: ['pork', 'ham', 'bacon', 'salami', 'prosciutto', 'gelatin', 'frankfurt'] },
   nutFreeSchool: { name: 'Nut-Free School', icon: '🚫🥜', excludeAllergens: ['peanuts', 'tree nuts'], excludeItems: ['peanut', 'almond', 'cashew', 'walnut', 'nutella', 'nut'] },
   dairyFree: { name: 'Dairy-Free', icon: '🥛🚫', excludeAllergens: ['dairy'], excludeItems: ['cheese', 'yogurt', 'milk', 'cream', 'butter'] },
@@ -2715,7 +2716,7 @@ const CustomFoodModal = ({ category, editItem, onSave, onClose }) => {
   );
 };
 
-const FoodSelectorModal = ({ category, child, selectedItems, onSelect, onClose, dietaryFilter, customFoods, onAddCustomFood, onEditCustomFood, onDeleteCustomFood }) => {
+const FoodSelectorModal = ({ category, child, selectedItems, onSelect, onClose, dietaryFilter, checkDietaryConflict, customFoods, onAddCustomFood, onEditCustomFood, onDeleteCustomFood }) => {
   const catData = FOOD_DATABASE[category];
   const [localSelection, setLocalSelection] = useState(selectedItems || []);
   const [showCustomModal, setShowCustomModal] = useState(false);
@@ -2742,6 +2743,9 @@ const FoodSelectorModal = ({ category, child, selectedItems, onSelect, onClose, 
   
   // Check if item is a disliked food (for bonus messaging)
   const isDisliked = (item) => child?.dislikes?.includes(item.id);
+  
+  // Check if item conflicts with dietary preference
+  const hasDietaryConflict = (item) => checkDietaryConflict ? checkDietaryConflict(item) : false;
   
   // Get display points for an item
   const getItemPoints = (item) => {
@@ -2909,6 +2913,7 @@ const FoodSelectorModal = ({ category, child, selectedItems, onSelect, onClose, 
               const capacityDisabled = atMaxCapacity && !selected;
               const disabled = allergenDisabled || capacityDisabled;
               const itemIsDisliked = isDisliked(item);
+              const itemHasDietaryConflict = hasDietaryConflict(item);
               
               return (
                 <button
@@ -2922,16 +2927,25 @@ const FoodSelectorModal = ({ category, child, selectedItems, onSelect, onClose, 
                         ? 'opacity-50 cursor-not-allowed bg-gray-50'
                         : selected
                           ? 'shadow-lg text-white'
-                          : itemIsDisliked
-                            ? 'bg-orange-50 hover:bg-orange-100 hover:shadow-md ring-2 ring-orange-300'
-                            : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
+                          : itemHasDietaryConflict
+                            ? 'bg-red-50 hover:bg-red-100 hover:shadow-md ring-2 ring-red-300'
+                            : itemIsDisliked
+                              ? 'bg-orange-50 hover:bg-orange-100 hover:shadow-md ring-2 ring-orange-300'
+                              : 'bg-gray-50 hover:bg-gray-100 hover:shadow-md'
                   }`}
                   style={{
                     background: selected && !allergenDisabled ? catData.color : undefined
                   }}
                 >
+                  {/* Dietary conflict badge */}
+                  {itemHasDietaryConflict && !selected && (
+                    <div className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-gradient-to-r from-red-400 to-rose-500 text-white text-xs font-bold rounded-full shadow" title="Conflicts with dietary preference">
+                      ⚠️
+                    </div>
+                  )}
+                  
                   {/* Brave badge for disliked items - shows bonus */}
-                  {itemIsDisliked && !selected && (
+                  {itemIsDisliked && !selected && !itemHasDietaryConflict && (
                     <div className="absolute -top-1 -left-1 px-1 py-0.5 bg-gradient-to-r from-orange-400 to-amber-500 text-white text-xs font-bold rounded-full shadow">
                       +25
                     </div>
@@ -7555,25 +7569,33 @@ function LunchboxApp() {
     const childDietaryMode = selectedChild?.dietaryMode || 'none';
     if (childDietaryMode === 'none') return items;
     
-    const mode = DIETARY_MODES[childDietaryMode];
-    if (!mode) return items;
+    // Don't filter - show all items but they'll be highlighted in the modal
+    // The surprise buttons use getAvailableItemsForCategory which properly filters
+    return items;
+  };
+  
+  // Check if an item conflicts with dietary preferences (for highlighting in modal)
+  const checkDietaryConflict = (item) => {
+    const childDietaryMode = selectedChild?.dietaryMode || 'none';
+    if (childDietaryMode === 'none') return false;
     
-    return items.filter(item => {
-      // Check allergens
-      if (mode.excludeAllergens?.length > 0) {
-        if (item.allergens?.some(a => mode.excludeAllergens.includes(a.toLowerCase()))) {
-          return false;
-        }
+    const mode = DIETARY_MODES[childDietaryMode];
+    if (!mode) return false;
+    
+    // Check allergens from dietary mode
+    if (mode.excludeAllergens?.length > 0) {
+      if (item.allergens?.some(a => mode.excludeAllergens.includes(a.toLowerCase()))) {
+        return true;
       }
-      // Check excluded items by name
-      if (mode.excludeItems?.length > 0) {
-        const itemName = item.name.toLowerCase();
-        if (mode.excludeItems.some(excluded => itemName.includes(excluded))) {
-          return false;
-        }
+    }
+    // Check excluded items by name
+    if (mode.excludeItems?.length > 0) {
+      const itemName = item.name.toLowerCase();
+      if (mode.excludeItems.some(excluded => itemName.includes(excluded))) {
+        return true;
       }
-      return true;
-    });
+    }
+    return false;
   };
 
   // Get bento layout from selected child (or default)
@@ -8218,6 +8240,7 @@ function LunchboxApp() {
           onSelect={handleSelectFood}
           onClose={() => setSelectedCategory(null)}
           dietaryFilter={filterByDietaryMode}
+          checkDietaryConflict={checkDietaryConflict}
           customFoods={customFoods}
           onAddCustomFood={handleAddCustomFood}
           onEditCustomFood={handleEditCustomFood}
