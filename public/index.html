@@ -99,12 +99,12 @@ const APP_VERSION = '0.6.0';
 // Dietary Mode Presets
 const DIETARY_MODES = {
   none: { name: 'No Filter', icon: '🍽️', excludeAllergens: [], excludeCategories: [] },
-  vegetarian: { name: 'Vegetarian', icon: '🥬', excludeAllergens: [], excludeItems: ['chicken', 'beef', 'lamb', 'pork', 'fish', 'prawn', 'tuna', 'salmon', 'ham', 'salami', 'bacon', 'meatball', 'sausage', 'frankfurt', 'turkey', 'roast', 'drumstick', 'wing', 'meat', 'steak', 'mince', 'schnitzel'] },
-  vegan: { name: 'Vegan', icon: '🌱', excludeAllergens: ['dairy', 'eggs'], excludeItems: ['chicken', 'beef', 'lamb', 'pork', 'fish', 'prawn', 'tuna', 'salmon', 'ham', 'salami', 'bacon', 'meatball', 'sausage', 'frankfurt', 'turkey', 'roast', 'drumstick', 'wing', 'meat', 'steak', 'mince', 'schnitzel', 'cheese', 'yogurt', 'milk', 'cream', 'butter', 'egg', 'honey', 'mayo', 'mayonnaise'] },
-  halal: { name: 'Halal', icon: '☪️', excludeAllergens: [], excludeItems: ['pork', 'ham', 'bacon', 'salami', 'prosciutto', 'gelatin', 'frankfurt'] },
-  nutFreeSchool: { name: 'Nut-Free School', icon: '🚫🥜', excludeAllergens: ['peanuts', 'tree nuts'], excludeItems: ['peanut', 'almond', 'cashew', 'walnut', 'nutella', 'nut'] },
-  dairyFree: { name: 'Dairy-Free', icon: '🥛🚫', excludeAllergens: ['dairy'], excludeItems: ['cheese', 'yogurt', 'milk', 'cream', 'butter'] },
-  glutenFree: { name: 'Gluten-Free', icon: '🌾🚫', excludeAllergens: ['gluten'], excludeItems: ['bread', 'pasta', 'cracker', 'wrap', 'sandwich', 'muffin', 'cookie', 'cake'] },
+  vegetarian: { name: 'Vegetarian', icon: '🥬', excludeAllergens: [], excludeItems: ['chicken', 'beef', 'lamb', 'pork', 'fish', 'prawn', 'tuna', 'salmon', 'ham', 'salami', 'bacon', 'meatball', 'sausage', 'frankfurt', 'turkey', 'roast beef', 'roast chicken', 'roast lamb', 'drumstick', 'wing', 'steak', 'mince', 'schnitzel', 'nugget', 'kebab', 'meatloaf', 'bolognese', 'carbonara'] },
+  vegan: { name: 'Vegan', icon: '🌱', excludeAllergens: ['dairy', 'eggs'], excludeItems: ['chicken', 'beef', 'lamb', 'pork', 'fish', 'prawn', 'tuna', 'salmon', 'ham', 'salami', 'bacon', 'meatball', 'sausage', 'frankfurt', 'turkey', 'roast beef', 'roast chicken', 'roast lamb', 'drumstick', 'wing', 'steak', 'mince', 'schnitzel', 'cheese', 'yogurt', 'yoghurt', 'milk', 'cream', 'butter', 'egg', 'honey', 'mayo', 'mayonnaise', 'nugget', 'kebab', 'meatloaf', 'bolognese', 'carbonara', 'custard', 'quiche'] },
+  halal: { name: 'Halal', icon: '☪️', excludeAllergens: [], excludeItems: ['pork', 'ham', 'bacon', 'salami', 'prosciutto', 'gelatin', 'frankfurt', 'pepperoni'] },
+  nutFreeSchool: { name: 'Nut-Free School', icon: '🚫🥜', excludeAllergens: ['peanuts', 'tree nuts'], excludeItems: ['peanut', 'almond', 'cashew', 'walnut', 'nutella', 'pistachio', 'macadamia', 'pecan', 'hazelnut'] },
+  dairyFree: { name: 'Dairy-Free', icon: '🥛🚫', excludeAllergens: ['dairy'], excludeItems: ['cheese', 'yogurt', 'yoghurt', 'milk', 'cream', 'butter', 'custard', 'ice cream'] },
+  glutenFree: { name: 'Gluten-Free', icon: '🌾🚫', excludeAllergens: ['gluten'], excludeItems: ['bread', 'pasta', 'cracker', 'wrap', 'sandwich', 'muffin', 'cookie', 'cake', 'pastry', 'croissant', 'noodle', 'couscous', 'pizza'] },
 };
 
 // Food data organized by the 6 food groups (Pick'n'Mix system)
@@ -575,6 +575,36 @@ const getAvailableCategoriesForChild = (child) => {
     available[category] = items.length > 0;
   });
   return available;
+};
+
+// Helper function to determine WHY a category is unavailable (allergen vs dietary)
+const getCategoryRestrictionReason = (category, child) => {
+  const catData = FOOD_DATABASE[category];
+  if (!catData) return null;
+  
+  // Check if category would have items without dietary mode
+  const itemsWithoutDietary = catData.items.filter(item => {
+    // Only check allergens
+    if (child?.allergens?.length > 0) {
+      if (item.allergens?.some(a => child.allergens.includes(a))) {
+        return false;
+      }
+    }
+    return true;
+  });
+  
+  // If no items even without dietary filtering, it's an allergen issue
+  if (itemsWithoutDietary.length === 0) {
+    return 'Allergen';
+  }
+  
+  // If items exist without dietary but not with it, it's dietary
+  const itemsWithDietary = getAvailableItemsForCategory(category, child);
+  if (itemsWithDietary.length === 0) {
+    return 'Dietary';
+  }
+  
+  return null; // Category is available
 };
 
 // Helper function to count fillable categories for a child
@@ -3150,7 +3180,9 @@ const InteractiveBentoBox = ({ selections, day, child, onSelectCategory, onSave,
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100/90 z-10">
             <div className="text-center">
               <span className="text-2xl">🚫</span>
-              <p className="text-xs font-medium text-gray-500">Allergen</p>
+              <p className="text-xs font-medium text-gray-500">
+                {getCategoryRestrictionReason(category, child) || 'Restricted'}
+              </p>
             </div>
           </div>
         )}
