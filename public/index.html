@@ -13,6 +13,15 @@
   
   <title>🍱 PAKT</title>
   
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-D98VXQ2XM2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-D98VXQ2XM2');
+  </script>
+  
   <!-- App Icons -->
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
@@ -49,6 +58,14 @@
   <script type="text/babel" data-presets="react">
 // Destructure React hooks for browser use
 const { useState, useEffect, useRef, useCallback } = React;
+
+// Analytics tracking helper
+const trackEvent = (eventName, params = {}) => {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', eventName, params);
+    console.log('[Analytics]', eventName, params);
+  }
+};
 
 // Bento Icon SVG Component - matches the app icon
 const BentoIcon = ({ size = 32, className = '' }) => (
@@ -4118,92 +4135,15 @@ const LICENSE_CONFIG = {
 };
 
 
-// Generate unique device fingerprint
-const generateDeviceId = async () => {
-  // Check if we already have a device ID stored
-  const storedId = localStorage.getItem('pakt-device-id');
-  if (storedId) return storedId;
-  
-  // Generate fingerprint from browser characteristics
-  const components = [
-    navigator.userAgent,
-    navigator.language,
-    screen.width + 'x' + screen.height,
-    screen.colorDepth,
-    new Date().getTimezoneOffset(),
-    navigator.hardwareConcurrency || 'unknown',
-    navigator.platform
-  ];
-  
-  // Create hash
-  const fingerprint = components.join('|');
-  const encoder = new TextEncoder();
-  const data = encoder.encode(fingerprint);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const deviceId = hashArray.slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('');
-  
-  // Store for future use
-  localStorage.setItem('pakt-device-id', deviceId);
-  return deviceId;
-};
-
 // Check if this device is already activated (for PWA/browser sync)
+// Note: check-device endpoint disabled - feature removed
 const checkDeviceActivation = async () => {
-  // Skip if already licensed
-  const existingLicense = localStorage.getItem('lunchbox-license');
-  if (existingLicense) {
-    try {
-      const parsed = JSON.parse(existingLicense);
-      if (parsed.verified) {
-        console.log('Already licensed, skipping device check');
-        return { recovered: false, alreadyLicensed: true };
-      }
-    } catch (e) {}
-  }
-  
-  // Skip if we already tried recovery this session
-  if (sessionStorage.getItem('pakt-recovery-attempted')) {
-    console.log('Recovery already attempted this session');
-    return { recovered: false, alreadyLicensed: false };
-  }
-  
-  try {
-    const deviceId = await generateDeviceId();
-    const response = await fetch(LICENSE_CONFIG.apiUrl + '/check-device?deviceId=' + encodeURIComponent(deviceId));
-    const data = await response.json();
-    
-    if (data.activated && data.licenseKey) {
-      // This device is already activated! Restore license
-      localStorage.setItem('lunchbox-license', JSON.stringify({
-        key: data.licenseKey,
-        verified: true,
-        date: new Date().toISOString(),
-        email: data.email,
-        deviceId: deviceId,
-        recoveredAt: new Date().toISOString()
-      }));
-      console.log('License recovered for this device:', data.licenseKey);
-      return { recovered: true, alreadyLicensed: false };
-    }
-  } catch (err) {
-    console.log('Device check failed (offline?):', err);
-  }
-  
-  // Mark that we tried recovery
-  sessionStorage.setItem('pakt-recovery-attempted', 'true');
+  // Skip device check - feature not available
   return { recovered: false, alreadyLicensed: false };
 };
 
-// Run device check on load
-checkDeviceActivation().then(result => {
-  if (result.recovered && !result.alreadyLicensed) {
-    // Only reload if we actually recovered something new
-    console.log('Reloading to apply recovered license...');
-    sessionStorage.setItem('pakt-recovery-attempted', 'true');
-    window.location.reload();
-  }
-});
+// Run device check on load (currently disabled)
+checkDeviceActivation();
 
 // Paywall Component
 const Paywall = ({ onUnlock, onClose, isTrialActive = false, daysLeft = 0, isLicensed = false, storedLicenseKey = '' }) => {
@@ -7347,11 +7287,17 @@ function LunchboxApp() {
     
     if (!result) return;
     
+    const child = children.find(c => c.id === childId);
+    const chore = child?.chores?.find(c => c.id === choreId);
+    
+    trackEvent('chore_completed', { 
+      child_name: child?.name || 'unknown',
+      chore_name: chore?.name || 'unknown'
+    });
+    
     setChoreProgress(prev => ({ ...prev, [key]: { completed: true, result, date: new Date().toISOString() } }));
     setWeekProgress(prev => ({ ...prev, completedChore: true }));
     
-    const child = children.find(c => c.id === childId);
-    const chore = child?.chores?.find(c => c.id === choreId);
     if (!chore) return;
     
     const pts = chore.points || 0;
@@ -7377,6 +7323,11 @@ function LunchboxApp() {
   };
   
   const handleRedeemReward = (reward, child) => {
+    trackEvent('reward_redeemed', { 
+      reward_name: reward.name,
+      child_name: child.name,
+      points_cost: reward.pointsCost
+    });
     // Deduct points from child
     setChildren(prev => prev.map(c => 
       c.id === child.id 
@@ -7548,6 +7499,7 @@ function LunchboxApp() {
       createdAt: new Date().toISOString(),
       items: { ...childPlan[day] }
     };
+    trackEvent('favorite_saved', { favorite_name: favorite.name });
     setFavorites(prev => [...prev, favorite]);
     showBenny('happy', 'celebration');
   };
@@ -7712,6 +7664,11 @@ function LunchboxApp() {
     // Update progress when planning lunch
     const itemCount = Object.values(daySelections).reduce((sum, arr) => sum + (arr?.length || 0), 0);
     if (itemCount > 0) {
+      trackEvent('lunchbox_planned', { 
+        day: currentDay, 
+        child_name: selectedChild?.name || 'unknown',
+        item_count: itemCount
+      });
       setWeekProgress(prev => ({ ...prev, plannedLunch: true }));
     }
     
@@ -7725,8 +7682,10 @@ function LunchboxApp() {
     setChildren(prev => {
       const existing = prev.find(c => c.id === childData.id);
       if (existing) {
+        trackEvent('child_updated', { child_name: childData.name });
         return prev.map(c => c.id === childData.id ? { ...childData, chores: c.chores || [], points: c.points || 0 } : c);
       }
+      trackEvent('child_created', { child_name: childData.name });
       return [...prev, { ...childData, chores: [], points: 0 }];
     });
     setEditingChild(null);
@@ -8100,7 +8059,10 @@ function LunchboxApp() {
           weekPlan={weekPlan}
           children={children}
           onClose={() => setShowShoppingList(false)}
-          onItemChecked={() => setWeekProgress(prev => ({ ...prev, checkedShoppingItem: true }))}
+          onItemChecked={() => {
+            trackEvent('shopping_item_checked');
+            setWeekProgress(prev => ({ ...prev, checkedShoppingItem: true }));
+          }}
         />
       )}
 
@@ -8163,7 +8125,10 @@ function LunchboxApp() {
               [taskId]: parent
             }));
           }}
-          onTaskChecked={() => setWeekProgress(prev => ({ ...prev, completedTodo: true }))}
+          onTaskChecked={() => {
+            trackEvent('todo_item_completed');
+            setWeekProgress(prev => ({ ...prev, completedTodo: true }));
+          }}
         />
       )}
 
