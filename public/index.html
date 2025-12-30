@@ -7375,8 +7375,6 @@ function LunchboxApp() {
     setChoreProgress(prev => ({ ...prev, [key]: { completed: true, result, date: new Date().toISOString() } }));
     setWeekProgress(prev => ({ ...prev, completedChore: true }));
     
-    const child = children.find(c => c.id === childId);
-    const chore = child?.chores?.find(c => c.id === choreId);
     if (!chore) return;
     
     const pts = chore.points || 0;
