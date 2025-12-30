@@ -4135,92 +4135,15 @@ const LICENSE_CONFIG = {
 };
 
 
-// Generate unique device fingerprint
-const generateDeviceId = async () => {
-  // Check if we already have a device ID stored
-  const storedId = localStorage.getItem('pakt-device-id');
-  if (storedId) return storedId;
-  
-  // Generate fingerprint from browser characteristics
-  const components = [
-    navigator.userAgent,
-    navigator.language,
-    screen.width + 'x' + screen.height,
-    screen.colorDepth,
-    new Date().getTimezoneOffset(),
-    navigator.hardwareConcurrency || 'unknown',
-    navigator.platform
-  ];
-  
-  // Create hash
-  const fingerprint = components.join('|');
-  const encoder = new TextEncoder();
-  const data = encoder.encode(fingerprint);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const deviceId = hashArray.slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('');
-  
-  // Store for future use
-  localStorage.setItem('pakt-device-id', deviceId);
-  return deviceId;
-};
-
 // Check if this device is already activated (for PWA/browser sync)
+// Note: check-device endpoint disabled - feature removed
 const checkDeviceActivation = async () => {
-  // Skip if already licensed
-  const existingLicense = localStorage.getItem('lunchbox-license');
-  if (existingLicense) {
-    try {
-      const parsed = JSON.parse(existingLicense);
-      if (parsed.verified) {
-        console.log('Already licensed, skipping device check');
-        return { recovered: false, alreadyLicensed: true };
-      }
-    } catch (e) {}
-  }
-  
-  // Skip if we already tried recovery this session
-  if (sessionStorage.getItem('pakt-recovery-attempted')) {
-    console.log('Recovery already attempted this session');
-    return { recovered: false, alreadyLicensed: false };
-  }
-  
-  try {
-    const deviceId = await generateDeviceId();
-    const response = await fetch(LICENSE_CONFIG.apiUrl + '/check-device?deviceId=' + encodeURIComponent(deviceId));
-    const data = await response.json();
-    
-    if (data.activated && data.licenseKey) {
-      // This device is already activated! Restore license
-      localStorage.setItem('lunchbox-license', JSON.stringify({
-        key: data.licenseKey,
-        verified: true,
-        date: new Date().toISOString(),
-        email: data.email,
-        deviceId: deviceId,
-        recoveredAt: new Date().toISOString()
-      }));
-      console.log('License recovered for this device:', data.licenseKey);
-      return { recovered: true, alreadyLicensed: false };
-    }
-  } catch (err) {
-    console.log('Device check failed (offline?):', err);
-  }
-  
-  // Mark that we tried recovery
-  sessionStorage.setItem('pakt-recovery-attempted', 'true');
+  // Skip device check - feature not available
   return { recovered: false, alreadyLicensed: false };
 };
 
-// Run device check on load
-checkDeviceActivation().then(result => {
-  if (result.recovered && !result.alreadyLicensed) {
-    // Only reload if we actually recovered something new
-    console.log('Reloading to apply recovered license...');
-    sessionStorage.setItem('pakt-recovery-attempted', 'true');
-    window.location.reload();
-  }
-});
+// Run device check on load (currently disabled)
+checkDeviceActivation();
 
 // Paywall Component
 const Paywall = ({ onUnlock, onClose, isTrialActive = false, daysLeft = 0, isLicensed = false, storedLicenseKey = '' }) => {
