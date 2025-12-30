@@ -67,6 +67,17 @@ const trackEvent = (eventName, params = {}) => {
   }
 };
 
+// Throttled tracking - max once per 60 seconds per event type
+const lastTracked = {};
+const trackEventThrottled = (eventName, params = {}) => {
+  const now = Date.now();
+  if (lastTracked[eventName] && now - lastTracked[eventName] < 60000) {
+    return; // Skip if tracked in last 60 seconds
+  }
+  lastTracked[eventName] = now;
+  trackEvent(eventName, params);
+};
+
 // Bento Icon SVG Component - matches the app icon
 const BentoIcon = ({ size = 32, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 100 100" className={className}>
@@ -7579,6 +7590,8 @@ function LunchboxApp() {
   const handleSurpriseWeek = () => {
     if (!selectedChild) return;
     
+    trackEventThrottled('surprise_week_used', { child_name: selectedChild.name });
+    
     const childKey = selectedChild.id;
     const layout = getChildLayout();
     const newWeekPlan = {};
@@ -8020,6 +8033,7 @@ function LunchboxApp() {
               onSave={saveDayPlan}
               onBack={() => { setCurrentView('planner'); setManualComplete(false); }}
               onSurpriseMe={() => {
+                trackEventThrottled('surprise_day_used', { day: currentDay, child_name: selectedChild?.name });
                 const surprise = generateSurpriseLunchbox(selectedChild, getChildLayout());
                 setDaySelections(surprise);
               }}
