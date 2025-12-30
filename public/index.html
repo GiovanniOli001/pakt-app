@@ -4518,7 +4518,7 @@ const Paywall = ({ onUnlock, onClose, isTrialActive = false, daysLeft = 0, isLic
 
         {/* Footer note */}
         <div className="px-6 pb-6">
-          {isTrialActive && onClose && (
+          {isTrialActive && onClose && !showKeyInput && (
             <button
               onClick={onClose}
               className="w-full py-3 mb-3 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-all"
