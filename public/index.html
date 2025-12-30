@@ -13,6 +13,15 @@
   
   <title>🍱 PAKT</title>
   
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-D98VXQ2XM2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-D98VXQ2XM2');
+  </script>
+  
   <!-- App Icons -->
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
@@ -49,6 +58,14 @@
   <script type="text/babel" data-presets="react">
 // Destructure React hooks for browser use
 const { useState, useEffect, useRef, useCallback } = React;
+
+// Analytics tracking helper
+const trackEvent = (eventName, params = {}) => {
+  if (typeof gtag !== 'undefined') {
+    gtag('event', eventName, params);
+    console.log('[Analytics]', eventName, params);
+  }
+};
 
 // Bento Icon SVG Component - matches the app icon
 const BentoIcon = ({ size = 32, className = '' }) => (
@@ -7347,6 +7364,14 @@ function LunchboxApp() {
     
     if (!result) return;
     
+    const child = children.find(c => c.id === childId);
+    const chore = child?.chores?.find(c => c.id === choreId);
+    
+    trackEvent('chore_completed', { 
+      child_name: child?.name || 'unknown',
+      chore_name: chore?.name || 'unknown'
+    });
+    
     setChoreProgress(prev => ({ ...prev, [key]: { completed: true, result, date: new Date().toISOString() } }));
     setWeekProgress(prev => ({ ...prev, completedChore: true }));
     
@@ -7377,6 +7402,11 @@ function LunchboxApp() {
   };
   
   const handleRedeemReward = (reward, child) => {
+    trackEvent('reward_redeemed', { 
+      reward_name: reward.name,
+      child_name: child.name,
+      points_cost: reward.pointsCost
+    });
     // Deduct points from child
     setChildren(prev => prev.map(c => 
       c.id === child.id 
@@ -7548,6 +7578,7 @@ function LunchboxApp() {
       createdAt: new Date().toISOString(),
       items: { ...childPlan[day] }
     };
+    trackEvent('favorite_saved', { favorite_name: favorite.name });
     setFavorites(prev => [...prev, favorite]);
     showBenny('happy', 'celebration');
   };
@@ -7712,6 +7743,11 @@ function LunchboxApp() {
     // Update progress when planning lunch
     const itemCount = Object.values(daySelections).reduce((sum, arr) => sum + (arr?.length || 0), 0);
     if (itemCount > 0) {
+      trackEvent('lunchbox_planned', { 
+        day: currentDay, 
+        child_name: selectedChild?.name || 'unknown',
+        item_count: itemCount
+      });
       setWeekProgress(prev => ({ ...prev, plannedLunch: true }));
     }
     
@@ -7725,8 +7761,10 @@ function LunchboxApp() {
     setChildren(prev => {
       const existing = prev.find(c => c.id === childData.id);
       if (existing) {
+        trackEvent('child_updated', { child_name: childData.name });
         return prev.map(c => c.id === childData.id ? { ...childData, chores: c.chores || [], points: c.points || 0 } : c);
       }
+      trackEvent('child_created', { child_name: childData.name });
       return [...prev, { ...childData, chores: [], points: 0 }];
     });
     setEditingChild(null);
@@ -8100,7 +8138,10 @@ function LunchboxApp() {
           weekPlan={weekPlan}
           children={children}
           onClose={() => setShowShoppingList(false)}
-          onItemChecked={() => setWeekProgress(prev => ({ ...prev, checkedShoppingItem: true }))}
+          onItemChecked={() => {
+            trackEvent('shopping_item_checked');
+            setWeekProgress(prev => ({ ...prev, checkedShoppingItem: true }));
+          }}
         />
       )}
 
@@ -8163,7 +8204,10 @@ function LunchboxApp() {
               [taskId]: parent
             }));
           }}
-          onTaskChecked={() => setWeekProgress(prev => ({ ...prev, completedTodo: true }))}
+          onTaskChecked={() => {
+            trackEvent('todo_item_completed');
+            setWeekProgress(prev => ({ ...prev, completedTodo: true }));
+          }}
         />
       )}
 
