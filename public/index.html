@@ -4217,110 +4217,6 @@ const Paywall = ({ onUnlock, onClose, isTrialActive = false, daysLeft = 0, isLic
   const [retrievedKey, setRetrievedKey] = useState('');
   const [isLookingUp, setIsLookingUp] = useState(false);
   
-  // Post-payment auto-detection state
-  const [showEmailCapture, setShowEmailCapture] = useState(false);
-  const [purchaseEmail, setPurchaseEmail] = useState('');
-  const [isCheckingPurchase, setIsCheckingPurchase] = useState(false);
-  const [checkingMessage, setCheckingMessage] = useState('');
-  
-  // Check for pending purchase on mount and visibility change
-  useEffect(() => {
-    const pendingEmail = sessionStorage.getItem('pakt-pending-purchase-email');
-    if (pendingEmail) {
-      // User returned after clicking Buy - check for their license
-      checkForPurchase(pendingEmail);
-    }
-    
-    // Also listen for page visibility changes (user returning from Stripe tab)
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        const email = sessionStorage.getItem('pakt-pending-purchase-email');
-        if (email && !isCheckingPurchase) {
-          checkForPurchase(email);
-        }
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, []);
-  
-  // Check if purchase completed via email lookup
-  const checkForPurchase = async (email) => {
-    setIsCheckingPurchase(true);
-    setCheckingMessage('Checking for your purchase...');
-    setError('');
-    
-    // Try up to 3 times with delays (Stripe webhook may take a moment)
-    for (let i = 0; i < 3; i++) {
-      try {
-        const response = await fetch(LICENSE_CONFIG.apiUrl + '/lookup?email=' + encodeURIComponent(email));
-        const data = await response.json();
-        
-        if (data.found && data.key) {
-          // Found the license! Auto-activate it
-          setCheckingMessage('Purchase found! Activating...');
-          sessionStorage.removeItem('pakt-pending-purchase-email');
-          
-          // Auto-activate the license
-          const deviceId = await generateDeviceId();
-          const activateResponse = await fetch(LICENSE_CONFIG.apiUrl + '/activate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: data.key, deviceId })
-          });
-          const activateData = await activateResponse.json();
-          
-          if (activateData.valid) {
-            localStorage.setItem('lunchbox-license', JSON.stringify({
-              key: data.key,
-              verified: true,
-              date: new Date().toISOString(),
-              email: email,
-              deviceId: deviceId
-            }));
-            setIsCheckingPurchase(false);
-            onUnlock();
-            return;
-          } else {
-            // License found but couldn't activate - show key for manual entry
-            setRetrievedKey(data.key);
-            setShowKeyInput(true);
-            setIsCheckingPurchase(false);
-            sessionStorage.removeItem('pakt-pending-purchase-email');
-            return;
-          }
-        }
-      } catch (err) {
-        console.log('Purchase check failed:', err);
-      }
-      
-      // Wait before retrying (increasing delay)
-      if (i < 2) {
-        setCheckingMessage('Still checking...');
-        await new Promise(r => setTimeout(r, 2000 * (i + 1)));
-      }
-    }
-    
-    // Not found after retries - may not have completed yet
-    setIsCheckingPurchase(false);
-    setCheckingMessage('');
-    // Keep the pending email so we check again on next focus
-  };
-  
-  // Handle Buy Now click - capture email first
-  const handleBuyClick = () => {
-    if (!purchaseEmail.trim()) {
-      setError('Please enter your email so we can find your license after purchase');
-      return;
-    }
-    // Store email for post-purchase detection
-    sessionStorage.setItem('pakt-pending-purchase-email', purchaseEmail.trim());
-    setShowEmailCapture(false);
-    // Open Stripe checkout
-    window.open(LICENSE_CONFIG.productUrl, '_blank');
-  };
-  
   const lookupLicenseByEmail = async () => {
     if (!lookupEmail.trim()) {
       setError('Please enter your email');
@@ -4467,114 +4363,46 @@ const Paywall = ({ onUnlock, onClose, isTrialActive = false, daysLeft = 0, isLic
             }
           </p>
         </div>
-        
-        {/* Pending purchase banner */}
-        {!isCheckingPurchase && sessionStorage.getItem('pakt-pending-purchase-email') && (
-          <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
-            <p className="text-sm text-blue-700 text-center mb-2">
-              🛒 Completed your purchase?
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => checkForPurchase(sessionStorage.getItem('pakt-pending-purchase-email'))}
-                className="flex-1 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-all"
-              >
-                Check Now
-              </button>
-              <button
-                onClick={() => {
-                  sessionStorage.removeItem('pakt-pending-purchase-email');
-                  setShowKeyInput(true);
-                }}
-                className="flex-1 py-2 bg-white text-blue-600 text-sm font-medium rounded-lg border border-blue-300 hover:bg-blue-50 transition-all"
-              >
-                Enter Key Manually
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Content */}
         <div className="p-6">
-          {/* Checking for purchase state */}
-          {isCheckingPurchase ? (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-4 animate-pulse">🔍</div>
-              <p className="text-lg font-medium text-gray-700 mb-2">{checkingMessage}</p>
-              <p className="text-sm text-gray-500">This usually takes just a moment</p>
-            </div>
-          ) : !showKeyInput ? (
+          {!showKeyInput ? (
             <>
-              {/* Email capture for purchase */}
-              {showEmailCapture ? (
-                <div className="text-center">
-                  <p className="text-gray-600 mb-4">
-                    Enter your email so we can automatically activate your license after purchase
-                  </p>
-                  <input
-                    type="email"
-                    value={purchaseEmail}
-                    onChange={(e) => {
-                      setPurchaseEmail(e.target.value);
-                      setError('');
-                    }}
-                    placeholder="your@email.com"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-400 focus:outline-none text-center mb-3"
-                  />
-                  {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-                  <button
-                    onClick={handleBuyClick}
-                    className="w-full py-4 bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold rounded-xl shadow-lg text-center text-lg hover:shadow-xl transition-all mb-3"
-                  >
-                    🛒 Continue to Payment - {LICENSE_CONFIG.price}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowEmailCapture(false);
-                      setError('');
-                    }}
-                    className="w-full py-3 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-all"
-                  >
-                    ← Back
-                  </button>
+              <div className="text-center mb-6">
+                <p className="text-gray-600 mb-4">
+                  {isTrialActive 
+                    ? 'Loving PAKT? Get lifetime access now!'
+                    : 'Unlock PAKT forever and keep planning amazing lunches for your kids!'
+                  }
+                </p>
+                <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-2xl p-4 mb-4">
+                  <p className="text-2xl font-bold text-green-600">{LICENSE_CONFIG.price}</p>
+                  <p className="text-sm text-gray-500">One-time payment • Lifetime access</p>
                 </div>
-              ) : (
-                <>
-                  <div className="text-center mb-6">
-                    <p className="text-gray-600 mb-4">
-                      {isTrialActive 
-                        ? 'Loving PAKT? Get lifetime access now!'
-                        : 'Unlock PAKT forever and keep planning amazing lunches for your kids!'
-                      }
-                    </p>
-                    <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-2xl p-4 mb-4">
-                      <p className="text-2xl font-bold text-green-600">{LICENSE_CONFIG.price}</p>
-                      <p className="text-sm text-gray-500">One-time payment • Lifetime access</p>
-                    </div>
-                    <ul className="text-left text-sm text-gray-600 space-y-2">
-                      <li className="flex items-center gap-2">✅ Unlimited children profiles</li>
-                      <li className="flex items-center gap-2">✅ Custom lunchbox layouts</li>
-                      <li className="flex items-center gap-2">✅ Weekly meal planning</li>
-                      <li className="flex items-center gap-2">✅ Shopping lists & to-do's</li>
-                      <li className="flex items-center gap-2">✅ All future updates free</li>
-                    </ul>
-                  </div>
+                <ul className="text-left text-sm text-gray-600 space-y-2">
+                  <li className="flex items-center gap-2">✅ Unlimited children profiles</li>
+                  <li className="flex items-center gap-2">✅ Custom lunchbox layouts</li>
+                  <li className="flex items-center gap-2">✅ Weekly meal planning</li>
+                  <li className="flex items-center gap-2">✅ Shopping lists & to-do's</li>
+                  <li className="flex items-center gap-2">✅ All future updates free</li>
+                </ul>
+              </div>
 
-                  <button
-                    onClick={() => setShowEmailCapture(true)}
-                    className="w-full py-4 bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold rounded-xl shadow-lg text-center text-lg hover:shadow-xl transition-all mb-3"
-                  >
-                    🛒 Buy Now - {LICENSE_CONFIG.price}
-                  </button>
+              <a
+                href={LICENSE_CONFIG.productUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-4 bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold rounded-xl shadow-lg text-center text-lg hover:shadow-xl transition-all mb-3"
+              >
+                🛒 Buy Now - {LICENSE_CONFIG.price}
+              </a>
 
-                  <button
-                    onClick={() => setShowKeyInput(true)}
-                    className="w-full py-3 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-all"
-                  >
-                    I already have a license key
-                  </button>
-                </>
-              )}
+              <button
+                onClick={() => setShowKeyInput(true)}
+                className="w-full py-3 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-all"
+              >
+                I already have a license key
+              </button>
             </>
           ) : (
             <>

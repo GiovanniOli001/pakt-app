@@ -67,12 +67,11 @@
     }
     .instructions h3 { color: #C2410C; margin-bottom: 12px; font-size: 16px; }
     .instructions ol { color: #6B7280; padding-left: 20px; line-height: 1.8; }
-    .loading { color: #6B7280; }
     .spinner {
       width: 40px;
       height: 40px;
       border: 4px solid #E5E7EB;
-      border-top-color: #F97316;
+      border-top-color: #22C55E;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 20px auto;
@@ -87,74 +86,77 @@
     }
     .home-link:hover { text-decoration: underline; }
     .email-lookup {
-      background: #EFF6FF;
-      border: 2px solid #3B82F6;
+      background: #F0FDF4;
+      border: 2px solid #22C55E;
       border-radius: 12px;
       padding: 20px;
       margin-top: 20px;
-      text-align: left;
     }
-    .email-lookup h3 { color: #1D4ED8; margin-bottom: 12px; font-size: 16px; }
+    .email-lookup h3 { color: #16A34A; margin-bottom: 12px; font-size: 16px; }
     .email-input {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       border: 2px solid #D1D5DB;
       border-radius: 8px;
       font-size: 16px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
     .email-input:focus {
       outline: none;
-      border-color: #3B82F6;
+      border-color: #22C55E;
     }
     .lookup-btn {
-      background: #3B82F6;
+      background: #22C55E;
       color: white;
       border: none;
-      padding: 12px 24px;
+      padding: 14px 24px;
       border-radius: 8px;
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
       width: 100%;
+      transition: background 0.2s;
     }
-    .lookup-btn:hover { background: #2563EB; }
+    .lookup-btn:hover { background: #16A34A; }
     .lookup-btn:disabled { background: #9CA3AF; cursor: not-allowed; }
     .status-text { 
       font-size: 14px; 
       color: #6B7280; 
-      margin-top: 15px;
+      margin-top: 10px;
     }
-    .attempt-counter {
-      font-size: 12px;
-      color: #9CA3AF;
-      margin-top: 5px;
+    .error-text {
+      color: #DC2626;
+      font-size: 14px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div id="loading">
-      <div class="emoji">⏳</div>
-      <h1>Processing Payment...</h1>
-      <p class="subtitle">Please wait while we generate your license key</p>
-      <div class="spinner"></div>
-      <p class="status-text" id="status-text">Connecting to server...</p>
-      <p class="attempt-counter" id="attempt-counter"></p>
+    <!-- Main view: Email lookup (primary method) -->
+    <div id="main-view">
+      <div class="emoji">🎉</div>
+      <h1>Payment Successful!</h1>
+      <p class="subtitle">Enter your email to get your license key</p>
       
-      <!-- Show email lookup while waiting -->
-      <div class="email-lookup" style="margin-top: 30px;">
-        <h3>⚡ Get your key instantly</h3>
+      <div class="email-lookup">
+        <h3>📧 Your Payment Email</h3>
         <p style="color: #6B7280; font-size: 14px; margin-bottom: 12px;">
-          Enter your payment email - no need to wait!
+          Enter the email you used for payment:
         </p>
-        <input type="email" id="email-input-loading" class="email-input" placeholder="your@email.com">
-        <button class="lookup-btn" onclick="lookupByEmail('email-input-loading')">🔍 Find My License</button>
-        <p id="lookup-error-loading" style="color: #DC2626; font-size: 14px; margin-top: 10px; display: none;"></p>
+        <input type="email" id="email-input" class="email-input" placeholder="your@email.com" autofocus>
+        <button class="lookup-btn" id="lookup-btn" onclick="lookupByEmail()">🔑 Get My License Key</button>
+        <p id="lookup-error" class="error-text" style="display: none;"></p>
+        <p id="lookup-status" class="status-text" style="display: none;"></p>
       </div>
+      
+      <p style="color: #9CA3AF; font-size: 13px; margin-top: 20px;">
+        Having trouble? Contact <strong>support@getpakt.app</strong>
+      </p>
     </div>
     
-    <div id="success" style="display: none;">
+    <!-- Success view: Show license key -->
+    <div id="success-view" style="display: none;">
       <div class="emoji">🎉</div>
       <h1>Thank You!</h1>
       <p class="subtitle">Your PAKT license is ready</p>
@@ -169,8 +171,8 @@
         <h3>📱 How to Activate</h3>
         <ol>
           <li>Open PAKT on your device</li>
-          <li>Tap "Enter License Key"</li>
-          <li>Paste your key above</li>
+          <li>Tap "I already have a license key"</li>
+          <li>Paste your key</li>
           <li>Enjoy PAKT! 🍱</li>
         </ol>
       </div>
@@ -179,97 +181,47 @@
         A copy has been sent to <strong id="email-display"></strong>
       </p>
       
-      <a href="https://getpakt.app" class="home-link">← Back to PAKT</a>
-    </div>
-    
-    <div id="error" style="display: none;">
-      <div class="emoji">🔍</div>
-      <h1>Find Your License</h1>
-      <p class="subtitle">Auto-lookup timed out - use email instead</p>
-      
-      <div class="email-lookup">
-        <h3>📧 Enter your payment email</h3>
-        <p style="color: #6B7280; font-size: 14px; margin-bottom: 12px;">
-          We'll find your license key instantly:
-        </p>
-        <input type="email" id="email-input-error" class="email-input" placeholder="your@email.com">
-        <button class="lookup-btn" onclick="lookupByEmail('email-input-error')">Find My License</button>
-        <p id="lookup-error-error" style="color: #DC2626; font-size: 14px; margin-top: 10px; display: none;"></p>
-      </div>
-      
-      <p style="color: #6B7280; font-size: 14px; margin-top: 20px;">
-        Still having trouble? Contact <strong>support@getpakt.app</strong>
-      </p>
-      
-      <a href="https://getpakt.app" class="home-link">← Back to PAKT</a>
+      <a href="https://getpakt.app" class="home-link">← Open PAKT App</a>
     </div>
   </div>
   
   <script>
     const API_URL = 'https://pakt-api.oliveri-john001.workers.dev';
     
-    async function checkLicense() {
+    // Try session-based lookup in background (don't show loading state)
+    async function trySessionLookup() {
       const params = new URLSearchParams(window.location.search);
       const sessionId = params.get('session_id');
       
-      console.log('Session ID from URL:', sessionId);
+      if (!sessionId) return;
       
-      if (!sessionId) {
-        console.log('No session ID - showing email lookup');
-        showError();
-        return;
-      }
-      
-      // Poll for license - more attempts, longer wait
-      let attempts = 0;
-      const maxAttempts = 15; // Increased from 10
-      const statusText = document.getElementById('status-text');
-      const attemptCounter = document.getElementById('attempt-counter');
-      
-      const poll = async () => {
+      // Try a few times silently in background
+      for (let i = 0; i < 5; i++) {
         try {
-          statusText.textContent = 'Looking up your license...';
-          attemptCounter.textContent = `Attempt ${attempts + 1} of ${maxAttempts}`;
-          
-          const url = `${API_URL}/success?session_id=${encodeURIComponent(sessionId)}`;
-          console.log('Polling:', url);
-          
-          const response = await fetch(url);
+          const response = await fetch(`${API_URL}/success?session_id=${encodeURIComponent(sessionId)}`);
           const data = await response.json();
-          
-          console.log('Response:', data);
           
           if (data.success && data.licenseKey) {
             showSuccess(data.licenseKey, data.email);
-          } else if (attempts < maxAttempts) {
-            attempts++;
-            statusText.textContent = 'Payment confirmed - generating license...';
-            // Longer delays: 1s, 2s, 2s, 3s, 3s... 
-            const delay = attempts <= 2 ? 1000 : attempts <= 5 ? 2000 : 3000;
-            setTimeout(poll, delay);
-          } else {
-            showError();
+            return;
           }
         } catch (err) {
-          console.error('Fetch error:', err);
-          if (attempts < maxAttempts) {
-            attempts++;
-            statusText.textContent = 'Retrying...';
-            setTimeout(poll, 2000);
-          } else {
-            showError();
-          }
+          console.log('Session lookup attempt failed:', err);
         }
-      };
-      
-      poll();
+        
+        // Wait before retry
+        await new Promise(r => setTimeout(r, 2000));
+      }
     }
     
-    async function lookupByEmail(inputId) {
-      const input = document.getElementById(inputId);
+    async function lookupByEmail() {
+      const input = document.getElementById('email-input');
       const email = input.value.trim();
-      const errorElId = inputId.replace('email-input', 'lookup-error');
-      const errorEl = document.getElementById(errorElId);
+      const errorEl = document.getElementById('lookup-error');
+      const statusEl = document.getElementById('lookup-status');
+      const btn = document.getElementById('lookup-btn');
+      
+      errorEl.style.display = 'none';
       
       if (!email) {
         errorEl.textContent = 'Please enter your email';
@@ -277,47 +229,50 @@
         return;
       }
       
-      // Disable button while loading
-      const btn = input.nextElementSibling;
+      // Show loading state
       btn.disabled = true;
-      btn.textContent = '⏳ Searching...';
-      errorEl.style.display = 'none';
+      btn.textContent = '🔍 Finding your license...';
+      statusEl.textContent = '';
+      statusEl.style.display = 'none';
       
-      try {
-        const response = await fetch(`${API_URL}/lookup?email=${encodeURIComponent(email)}`);
-        const data = await response.json();
-        
-        console.log('Lookup response:', data);
-        
-        if (data.found && data.key) {
-          showSuccess(data.key, email);
-        } else {
-          errorEl.textContent = 'No license found for this email. Check spelling or contact support@getpakt.app';
-          errorEl.style.display = 'block';
-          btn.disabled = false;
-          btn.textContent = '🔍 Find My License';
+      // Try lookup with a few retries (webhook may still be processing)
+      for (let i = 0; i < 3; i++) {
+        try {
+          const response = await fetch(`${API_URL}/lookup?email=${encodeURIComponent(email)}`);
+          const data = await response.json();
+          
+          if (data.found && data.key) {
+            showSuccess(data.key, email);
+            return;
+          }
+          
+          // Not found yet - if first attempt, wait and retry
+          if (i < 2) {
+            statusEl.textContent = 'Processing payment, please wait...';
+            statusEl.style.display = 'block';
+            await new Promise(r => setTimeout(r, 3000));
+          }
+        } catch (err) {
+          console.error('Lookup error:', err);
+          if (i < 2) {
+            await new Promise(r => setTimeout(r, 2000));
+          }
         }
-      } catch (err) {
-        console.error('Lookup error:', err);
-        errorEl.textContent = 'Connection error. Please try again.';
-        errorEl.style.display = 'block';
-        btn.disabled = false;
-        btn.textContent = '🔍 Find My License';
       }
+      
+      // Still not found after retries
+      errorEl.textContent = 'License not found. Please check your email spelling, or wait a minute and try again. Contact support@getpakt.app if the issue persists.';
+      errorEl.style.display = 'block';
+      statusEl.style.display = 'none';
+      btn.disabled = false;
+      btn.textContent = '🔑 Get My License Key';
     }
     
     function showSuccess(key, email) {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('error').style.display = 'none';
-      document.getElementById('success').style.display = 'block';
+      document.getElementById('main-view').style.display = 'none';
+      document.getElementById('success-view').style.display = 'block';
       document.getElementById('license-key').textContent = key;
       document.getElementById('email-display').textContent = email || 'your email';
-    }
-    
-    function showError() {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('success').style.display = 'none';
-      document.getElementById('error').style.display = 'block';
     }
     
     function copyKey() {
@@ -333,8 +288,15 @@
       });
     }
     
-    // Start checking on page load
-    checkLicense();
+    // Allow Enter key to submit
+    document.getElementById('email-input').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        lookupByEmail();
+      }
+    });
+    
+    // Try session lookup in background (won't interrupt user)
+    trySessionLookup();
   </script>
 </body>
 </html>
