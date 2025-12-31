@@ -1,6 +1,6 @@
 # PAKT Project Documentation
 **Last Updated:** December 31, 2025
-**Current Version:** 0.7.0
+**Current Version:** 0.7.2
 **Status:** Production - Live at getpakt.app
 
 ---
@@ -89,7 +89,7 @@ pakt-app/
 │   ├── index.html            # Main React app (~8600 lines)
 │   ├── success.html          # Post-payment license page
 │   ├── manifest.json         # PWA manifest
-│   ├── sw.js                 # Service worker (v7)
+│   ├── sw.js                 # Service worker (v8)
 │   ├── favicon.ico           # Multi-size favicon
 │   ├── favicon-32.png        # 32px favicon
 │   ├── icon-192.png          # PWA icon
@@ -210,6 +210,7 @@ App loads → checkDeviceActivation()
 | `lunchbox-chore-progress` | Chore completion status |
 | `lunchbox-custom-rewards` | User-created rewards |
 | `lunchbox-ate-all` | "Ate it all" tracking |
+| `lunchbox-bonus-round` | Bonus round enabled (true/false) |
 
 ---
 
@@ -334,7 +335,8 @@ const CACHE_NAME = 'pakt-v8'; // Increment from current
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **0.7.1** | **Dec 31, 2025** | **Added per-item supermarket links to shopping list (Woolies/Coles)** |
+| **0.7.2** | **Dec 31, 2025** | **Benny's Bonus Round - 10% chance math mini-game after chores (default ON)** |
+| 0.7.1 | Dec 31, 2025 | Added per-item supermarket links to shopping list (Woolies/Coles) |
 | 0.7.0 | Dec 31, 2025 | Restored: Google Analytics, food filters, 309 food items, trackEvent calls |
 | 0.6.0 | Dec 28, 2025 | PAKT rebrand, Stripe payments, device limiting |
 | 0.5.3 | Dec 28, 2025 | Food database expansion (241 items) |
@@ -361,12 +363,23 @@ const CACHE_NAME = 'pakt-v8'; // Increment from current
 - ✅ Restored category filters (Fresh, Dried, Cheese, etc.)
 - ✅ Restored filter UI in FoodSelectorModal
 - ✅ Added checkDietaryConflict function
-- ✅ Updated sw.js to v7
+- ✅ Updated sw.js to v8
 
 **New Feature (v0.7.1):**
 - ✅ Supermarket deep links in shopping list
 - ✅ Subtle per-item links (Woolies • Coles) under each ingredient
 - Links open product search in new tab
+
+**New Feature (v0.7.2):**
+- ✅ Benny's Bonus Round - math mini-game after chores
+- ✅ Toggle ON/OFF via More Options menu
+- ✅ **Default ON** for new users
+- ✅ **10% random chance** to trigger (surprise element)
+- ✅ 20-second timed math challenge
+- ✅ Difficulty scales with child's age (easy/medium/hard)
+- ✅ Earn up to 10 bonus points per chore
+- ✅ Skip option always available
+- ✅ "Turn off in ⚙️ More Options" hint shown in game
 
 **Root cause:** Working from outdated file instead of fetching latest
 
