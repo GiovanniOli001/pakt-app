@@ -94,7 +94,7 @@ const BentoIcon = ({ size = 32, className = '' }) => (
 
 
 // App Version
-const APP_VERSION = '0.7.1';
+const APP_VERSION = '0.7.2';
 
 // Dietary Mode Presets
 const DIETARY_MODES = {
@@ -6730,7 +6730,272 @@ const RewardsModal = ({ rewards, onAddReward, onDeleteReward, onRedeemReward, ch
 };
 
 // More Menu Component
-const MoreMenu = ({ onClose, onClearData, onResetPoints }) => {
+// Benny's Bonus Round - Math mini-game after completing chores
+const BonusRoundGame = ({ child, basePoints, onComplete, onSkip }) => {
+  const [timeLeft, setTimeLeft] = useState(20);
+  const [score, setScore] = useState(0);
+  const [question, setQuestion] = useState(null);
+  const [gameOver, setGameOver] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [isCorrect, setIsCorrect] = useState(null);
+  
+  // Determine difficulty based on child's age
+  const getAgeTier = () => {
+    const age = child?.age || 7;
+    if (age <= 6) return 'easy';
+    if (age <= 10) return 'medium';
+    return 'hard';
+  };
+  
+  // Generate a math question based on difficulty
+  const generateQuestion = () => {
+    const tier = getAgeTier();
+    let num1, num2, operator, answer;
+    
+    if (tier === 'easy') {
+      // Ages 5-6: Addition/subtraction up to 10
+      num1 = Math.floor(Math.random() * 8) + 1;
+      num2 = Math.floor(Math.random() * (10 - num1)) + 1;
+      operator = Math.random() > 0.5 ? '+' : '-';
+      if (operator === '-') {
+        [num1, num2] = [Math.max(num1, num2) + num2, Math.min(num1, num2)];
+        num1 = num1 - num2 + Math.floor(Math.random() * 5);
+        if (num1 > 10) num1 = 10;
+        num2 = Math.floor(Math.random() * num1) + 1;
+      }
+      answer = operator === '+' ? num1 + num2 : num1 - num2;
+    } else if (tier === 'medium') {
+      // Ages 7-10: Larger numbers, some multiplication
+      const opRand = Math.random();
+      if (opRand < 0.4) {
+        operator = '+';
+        num1 = Math.floor(Math.random() * 20) + 5;
+        num2 = Math.floor(Math.random() * 20) + 5;
+        answer = num1 + num2;
+      } else if (opRand < 0.7) {
+        operator = '-';
+        num1 = Math.floor(Math.random() * 30) + 10;
+        num2 = Math.floor(Math.random() * num1);
+        answer = num1 - num2;
+      } else {
+        operator = '×';
+        num1 = Math.floor(Math.random() * 10) + 2;
+        num2 = Math.floor(Math.random() * 10) + 2;
+        answer = num1 * num2;
+      }
+    } else {
+      // Ages 11+: Multiplication and division
+      const opRand = Math.random();
+      if (opRand < 0.5) {
+        operator = '×';
+        num1 = Math.floor(Math.random() * 12) + 2;
+        num2 = Math.floor(Math.random() * 12) + 2;
+        answer = num1 * num2;
+      } else {
+        operator = '÷';
+        num2 = Math.floor(Math.random() * 10) + 2;
+        answer = Math.floor(Math.random() * 10) + 2;
+        num1 = num2 * answer;
+      }
+    }
+    
+    // Generate wrong answers
+    const wrongAnswers = new Set();
+    while (wrongAnswers.size < 3) {
+      const offset = Math.floor(Math.random() * 10) - 5;
+      const wrong = answer + (offset === 0 ? 1 : offset);
+      if (wrong !== answer && wrong > 0) {
+        wrongAnswers.add(wrong);
+      }
+    }
+    
+    // Shuffle answers
+    const allAnswers = [answer, ...wrongAnswers].sort(() => Math.random() - 0.5);
+    
+    return {
+      text: `${num1} ${operator} ${num2}`,
+      answer,
+      options: allAnswers
+    };
+  };
+  
+  // Initialize first question
+  useEffect(() => {
+    setQuestion(generateQuestion());
+  }, []);
+  
+  // Timer countdown
+  useEffect(() => {
+    if (gameOver || !question) return;
+    
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          setGameOver(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [gameOver, question]);
+  
+  // Handle answer selection
+  const handleAnswer = (selected) => {
+    if (gameOver || selectedAnswer !== null) return;
+    
+    setSelectedAnswer(selected);
+    const correct = selected === question.answer;
+    setIsCorrect(correct);
+    
+    if (correct) {
+      setScore(prev => prev + 1);
+    }
+    
+    // Brief delay then next question
+    setTimeout(() => {
+      setSelectedAnswer(null);
+      setIsCorrect(null);
+      setQuestion(generateQuestion());
+    }, 600);
+  };
+  
+  // Benny messages
+  const getBennyMessage = () => {
+    if (gameOver) {
+      if (score === 0) return "Nice try! You still got your chore points!";
+      if (score <= 2) return "Good effort! Here's your bonus!";
+      if (score <= 5) return "Awesome work! Big bonus!";
+      return "AMAZING! You're a math superstar!";
+    }
+    if (isCorrect === true) return "Yes! 🎉";
+    if (isCorrect === false) return "Oops! Keep going!";
+    return "You've got this!";
+  };
+  
+  const bonusPoints = Math.min(score, 10);
+  
+  return (
+    <div className="fixed inset-0 bg-gradient-to-b from-sky-400 to-sky-300 z-50 flex flex-col">
+      {/* Sky background with clouds */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-10 w-20 h-12 bg-white rounded-full opacity-80"></div>
+        <div className="absolute top-8 left-16 w-16 h-10 bg-white rounded-full opacity-80"></div>
+        <div className="absolute top-20 right-20 w-24 h-14 bg-white rounded-full opacity-70"></div>
+        <div className="absolute top-16 right-28 w-16 h-10 bg-white rounded-full opacity-70"></div>
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-green-500 to-green-400 rounded-t-full"></div>
+      </div>
+      
+      {/* Content */}
+      <div className="relative z-10 flex flex-col h-full p-4">
+        {/* Header */}
+        <div className="text-center mb-4">
+          <h2 className="text-2xl font-bold text-white drop-shadow-lg">
+            🎲 Benny's Bonus Round!
+          </h2>
+          {!gameOver && (
+            <div className="mt-2 flex justify-center gap-4">
+              <span className="bg-white/90 px-4 py-1 rounded-full font-bold text-sky-600">
+                ⏱️ {timeLeft}s
+              </span>
+              <span className="bg-white/90 px-4 py-1 rounded-full font-bold text-amber-600">
+                ⭐ {score}
+              </span>
+            </div>
+          )}
+        </div>
+        
+        {/* Game Area */}
+        <div className="flex-1 flex flex-col items-center justify-center">
+          {!gameOver ? (
+            <>
+              {/* Question */}
+              <div className="bg-white rounded-3xl shadow-2xl p-6 mb-6 min-w-[280px]">
+                <div className="text-4xl font-bold text-center text-gray-800">
+                  {question?.text} = ?
+                </div>
+              </div>
+              
+              {/* Answer options */}
+              <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
+                {question?.options.map((option, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleAnswer(option)}
+                    disabled={selectedAnswer !== null}
+                    className={`py-4 px-6 rounded-2xl text-2xl font-bold shadow-lg transition-all transform active:scale-95 ${
+                      selectedAnswer === option
+                        ? option === question.answer
+                          ? 'bg-green-500 text-white scale-105'
+                          : 'bg-red-500 text-white'
+                        : 'bg-white hover:bg-gray-50 text-gray-800'
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            /* Game Over */
+            <div className="bg-white rounded-3xl shadow-2xl p-8 text-center max-w-sm">
+              <div className="text-6xl mb-4">🎉</div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Time's Up!</h3>
+              <p className="text-gray-600 mb-4">You got {score} correct!</p>
+              <div className="bg-amber-100 rounded-2xl p-4 mb-4">
+                <div className="text-sm text-amber-700">Chore Points</div>
+                <div className="text-2xl font-bold text-amber-600">+{basePoints} ⭐</div>
+                {bonusPoints > 0 && (
+                  <>
+                    <div className="text-sm text-amber-700 mt-2">Bonus Points</div>
+                    <div className="text-2xl font-bold text-green-600">+{bonusPoints} ⭐</div>
+                  </>
+                )}
+                <div className="border-t border-amber-300 mt-3 pt-3">
+                  <div className="text-lg font-bold text-amber-800">
+                    Total: {basePoints + bonusPoints} ⭐
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => onComplete(bonusPoints)}
+                className="w-full py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all"
+              >
+                Collect Points!
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {/* Benny */}
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <BennyWombat mood="happy" size="md" />
+          <div className="bg-white rounded-2xl px-4 py-2 shadow-lg max-w-[200px]">
+            <p className="text-sm font-medium text-gray-700">{getBennyMessage()}</p>
+          </div>
+        </div>
+        
+        {/* Skip button - only before game over */}
+        {!gameOver && (
+          <div className="text-center">
+            <button
+              onClick={onSkip}
+              className="text-white/80 hover:text-white text-sm font-medium py-2"
+            >
+              Skip bonus round →
+            </button>
+            <p className="text-white/50 text-xs mt-1">
+              Turn off in ⚙️ More Options
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const MoreMenu = ({ onClose, onClearData, onResetPoints, bonusRoundEnabled, onToggleBonusRound }) => {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden">
@@ -6740,6 +7005,27 @@ const MoreMenu = ({ onClose, onClearData, onResetPoints }) => {
         </div>
         
         <div className="p-5 space-y-3">
+          {/* Bonus Round Toggle */}
+          <button
+            onClick={onToggleBonusRound}
+            className={`w-full py-4 px-4 font-medium rounded-xl transition-all flex items-center justify-between ${
+              bonusRoundEnabled 
+                ? 'bg-sky-100 hover:bg-sky-200 text-sky-700' 
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              🎲 Benny's Bonus Round
+            </span>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+              bonusRoundEnabled 
+                ? 'bg-sky-500 text-white' 
+                : 'bg-gray-300 text-gray-600'
+            }`}>
+              {bonusRoundEnabled ? 'ON' : 'OFF'}
+            </span>
+          </button>
+          
           <button
             onClick={onResetPoints}
             className="w-full py-4 px-4 bg-amber-50 hover:bg-amber-100 text-amber-600 font-medium rounded-xl transition-all flex items-center justify-center gap-2"
@@ -7426,6 +7712,20 @@ function LunchboxApp() {
   const [showRewards, setShowRewards] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   
+  // Bonus Round state
+  const [bonusRoundEnabled, setBonusRoundEnabled] = useState(() => {
+    const saved = localStorage.getItem('lunchbox-bonus-round');
+    return saved !== null ? JSON.parse(saved) : true; // Default ON
+  });
+  const [showBonusRound, setShowBonusRound] = useState(false);
+  const [bonusRoundChild, setBonusRoundChild] = useState(null);
+  const [bonusRoundBasePoints, setBonusRoundBasePoints] = useState(0);
+  
+  // Persist bonus round setting
+  useEffect(() => {
+    localStorage.setItem('lunchbox-bonus-round', JSON.stringify(bonusRoundEnabled));
+  }, [bonusRoundEnabled]);
+  
   // Benny popup state
   const [bennyPopup, setBennyPopup] = useState({ show: false, mood: 'happy', message: '' });
   
@@ -7634,7 +7934,15 @@ function LunchboxApp() {
     });
     
     if (result.type === 'self') {
-      setChildren(prev => prev.map(c => c.id === childId ? { ...c, points: (c.points || 0) + pts } : c));
+      // Check if bonus round is enabled AND random 10% chance
+      if (bonusRoundEnabled && Math.random() < 0.10) {
+        // Store info and show bonus round
+        setBonusRoundChild(child);
+        setBonusRoundBasePoints(pts);
+        setShowBonusRound(true);
+      } else {
+        setChildren(prev => prev.map(c => c.id === childId ? { ...c, points: (c.points || 0) + pts } : c));
+      }
     } else if (result.type === 'helped') {
       setChildren(prev => prev.map(c => (c.id === childId || (result.helpers || []).includes(c.id)) ? { ...c, points: (c.points || 0) + pts } : c));
       showBenny('happy', 'kindness');
@@ -7642,6 +7950,31 @@ function LunchboxApp() {
       setChildren(prev => prev.map(c => c.id === result.siblingId ? { ...c, points: (c.points || 0) + pts + 5 } : c));
       showBenny('happy', 'kindness');
     }
+  };
+  
+  // Handle bonus round completion
+  const handleBonusRoundComplete = (bonusPoints) => {
+    if (bonusRoundChild) {
+      const totalPoints = bonusRoundBasePoints + bonusPoints;
+      setChildren(prev => prev.map(c => 
+        c.id === bonusRoundChild.id ? { ...c, points: (c.points || 0) + totalPoints } : c
+      ));
+    }
+    setShowBonusRound(false);
+    setBonusRoundChild(null);
+    setBonusRoundBasePoints(0);
+  };
+  
+  // Handle bonus round skip
+  const handleBonusRoundSkip = () => {
+    if (bonusRoundChild) {
+      setChildren(prev => prev.map(c => 
+        c.id === bonusRoundChild.id ? { ...c, points: (c.points || 0) + bonusRoundBasePoints } : c
+      ));
+    }
+    setShowBonusRound(false);
+    setBonusRoundChild(null);
+    setBonusRoundBasePoints(0);
   };
   
   // Reward management functions
@@ -8600,6 +8933,18 @@ function LunchboxApp() {
           onClose={() => setShowMore(false)}
           onClearData={() => setShowClearDataConfirm(true)}
           onResetPoints={() => setShowResetPoints(true)}
+          bonusRoundEnabled={bonusRoundEnabled}
+          onToggleBonusRound={() => setBonusRoundEnabled(prev => !prev)}
+        />
+      )}
+      
+      {/* Bonus Round Game */}
+      {showBonusRound && bonusRoundChild && (
+        <BonusRoundGame
+          child={bonusRoundChild}
+          basePoints={bonusRoundBasePoints}
+          onComplete={handleBonusRoundComplete}
+          onSkip={handleBonusRoundSkip}
         />
       )}
       
