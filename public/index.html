@@ -6978,12 +6978,17 @@ const BonusRoundGame = ({ child, basePoints, onComplete, onSkip }) => {
         
         {/* Skip button - only before game over */}
         {!gameOver && (
-          <button
-            onClick={onSkip}
-            className="text-white/70 hover:text-white text-sm font-medium py-2"
-          >
-            Skip bonus round →
-          </button>
+          <div className="text-center">
+            <button
+              onClick={onSkip}
+              className="text-white/80 hover:text-white text-sm font-medium py-2"
+            >
+              Skip bonus round →
+            </button>
+            <p className="text-white/50 text-xs mt-1">
+              Turn off in ⚙️ More Options
+            </p>
+          </div>
         )}
       </div>
     </div>
@@ -7710,7 +7715,7 @@ function LunchboxApp() {
   // Bonus Round state
   const [bonusRoundEnabled, setBonusRoundEnabled] = useState(() => {
     const saved = localStorage.getItem('lunchbox-bonus-round');
-    return saved ? JSON.parse(saved) : false;
+    return saved !== null ? JSON.parse(saved) : true; // Default ON
   });
   const [showBonusRound, setShowBonusRound] = useState(false);
   const [bonusRoundChild, setBonusRoundChild] = useState(null);
@@ -7929,8 +7934,8 @@ function LunchboxApp() {
     });
     
     if (result.type === 'self') {
-      // Check if bonus round is enabled
-      if (bonusRoundEnabled) {
+      // Check if bonus round is enabled AND random 10% chance
+      if (bonusRoundEnabled && Math.random() < 0.10) {
         // Store info and show bonus round
         setBonusRoundChild(child);
         setBonusRoundBasePoints(pts);
