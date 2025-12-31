@@ -15,6 +15,8 @@
    - [ ] FOOD_DATABASE has `filters:` arrays (should be 7)
    - [ ] `activeFilters` state in FoodSelectorModal (should be 8+ occurrences)
    - [ ] Bracket counts balanced (open = close)
+   - [ ] LICENSE_CONFIG URLs unchanged
+   - [ ] API endpoints unchanged
 
 2. **Never work from memory** - always use the uploaded/fetched file as base
 
@@ -24,23 +26,28 @@ echo "Analytics:" && grep -c "G-D98VXQ2XM2" index.html
 echo "trackEvent:" && grep -c "trackEvent(" index.html
 echo "Filters:" && grep -c "filters:" index.html
 echo "activeFilters:" && grep -c "activeFilters" index.html
+echo "LICENSE_CONFIG:" && grep -A5 "LICENSE_CONFIG" index.html | head -7
 ```
 
 4. **Update version number** in index.html when making changes
 
 5. **Update this PAKT-PROJECT.md** with changes made
 
+6. **NEVER modify these without explicit permission:**
+   - Stripe webhook URL
+   - API endpoint URLs
+   - LICENSE_CONFIG values
+   - pakt-worker.js endpoints
+
 ---
 
 ## Quick Start for New Chat
 
-Paste this to start a session:
 ```
-Continue PAKT development. Here's the repo:
-https://raw.githubusercontent.com/GiovanniOli001/pakt-app/main/public/index.html
+Continue PAKT development. Upload files first.
 ```
 
-Or upload the index.html file directly.
+Then upload `index.html` and `PAKT-PROJECT.md` from the repo.
 
 ---
 
@@ -58,6 +65,22 @@ A Progressive Web App (PWA) for Australian parents to:
 
 ---
 
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Frontend | Single-file React app (Babel in-browser) |
+| Styling | Tailwind CSS (CDN) |
+| Hosting | Cloudflare Pages |
+| API | Cloudflare Workers |
+| Database | Cloudflare KV |
+| Payments | Stripe |
+| Analytics | Google Analytics (G-D98VXQ2XM2) |
+| Domain | getpakt.app (Cloudflare) |
+| Email | support@getpakt.app (Cloudflare Email Routing) |
+
+---
+
 ## Repository Structure
 
 ```
@@ -66,7 +89,7 @@ pakt-app/
 │   ├── index.html            # Main React app (~8600 lines)
 │   ├── success.html          # Post-payment license page
 │   ├── manifest.json         # PWA manifest
-│   ├── sw.js                 # Service worker (v6)
+│   ├── sw.js                 # Service worker (v7)
 │   ├── favicon.ico           # Multi-size favicon
 │   ├── favicon-32.png        # 32px favicon
 │   ├── icon-192.png          # PWA icon
@@ -79,23 +102,7 @@ pakt-app/
 
 ---
 
-## Tech Stack
-
-| Component | Technology |
-|-----------|------------|
-| Frontend | Single-file React app (Babel in-browser) |
-| Styling | Tailwind CSS (CDN) |
-| Hosting | Cloudflare Pages |
-| API | Cloudflare Workers |
-| Database | Cloudflare KV |
-| Payments | Stripe ($3.99 AUD one-time) |
-| Analytics | Google Analytics (G-D98VXQ2XM2) |
-| Domain | getpakt.app (Cloudflare) |
-| Email | support@getpakt.app |
-
----
-
-## URLs & Configuration
+## URLs & Configuration (DO NOT CHANGE)
 
 ### Live URLs
 - **App:** https://getpakt.app
@@ -103,7 +110,7 @@ pakt-app/
 - **API:** https://pakt-api.oliveri-john001.workers.dev
 - **Success Page:** https://getpakt.app/success.html
 
-### LICENSE_CONFIG (in index.html)
+### LICENSE_CONFIG (in index.html - DO NOT CHANGE)
 ```javascript
 const LICENSE_CONFIG = {
   apiUrl: 'https://pakt-api.oliveri-john001.workers.dev',
@@ -113,6 +120,96 @@ const LICENSE_CONFIG = {
   debugCode: 'debugpakt'
 };
 ```
+
+### Cloudflare Setup
+- **Pages Project:** Hosts app files (auto-deploys from GitHub)
+- **Worker:** `pakt-api` handles licensing
+- **KV Namespace:** `pakt-licenses` stores license data
+- **Email Routing:** support@getpakt.app → owner's Gmail
+
+### Stripe Setup (DO NOT CHANGE)
+- **Product:** PAKT Lifetime License ($3.99 AUD one-time)
+- **Webhook URL:** https://pakt-api.oliveri-john001.workers.dev/webhook
+- **Webhook Event:** checkout.session.completed
+- **Success Redirect:** https://getpakt.app/success.html?session_id={CHECKOUT_SESSION_ID}
+
+---
+
+## API Endpoints (pakt-worker.js v3) - DO NOT CHANGE
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/` | GET | Health check, returns version |
+| `/webhook` | POST | Receives Stripe payment events, creates license |
+| `/activate` | POST | Activate license on device (body: {key, deviceId}) |
+| `/validate` | GET | Simple key validation (?key=XXX) |
+| `/check-device` | GET | Check if device already activated (?deviceId=XXX) |
+| `/lookup` | GET | Find license by email (?email=XXX) |
+| `/success` | GET | Get license by Stripe session (?session_id=XXX) |
+| `/deactivate` | POST | Remove device from license |
+
+### Device Limiting
+- Maximum 3 devices per license
+- Device fingerprint: SHA-256 hash of browser characteristics
+- Stored in localStorage as 'pakt-device-id'
+- Device→Key mapping stored in KV as `device:{deviceId}`
+
+---
+
+## License System Flow
+
+### Purchase Flow
+```
+User clicks Buy → Stripe Checkout → Payment Success
+                                          ↓
+                            Stripe sends webhook to /webhook
+                                          ↓
+                            Worker generates PAKT-XXXX-XXXX-XXXX
+                                          ↓
+                            Stores in KV: {email, devices:[], status}
+                                          ↓
+                            Stores mapping: email:{email} → key
+                                          ↓
+                            User redirected to success.html?session_id=XXX
+                                          ↓
+                            Page fetches key via /success endpoint
+                                          ↓
+                            User copies key, enters in app
+                                          ↓
+                            App calls /activate with key + deviceId
+                                          ↓
+                            License stored in localStorage
+```
+
+### Device Recovery (Browser ↔ PWA Sync)
+```
+App loads → checkDeviceActivation()
+                    ↓
+            Generates/retrieves deviceId
+                    ↓
+            Calls /check-device?deviceId=XXX
+                    ↓
+            If activated: returns licenseKey
+                    ↓
+            Saves to localStorage → reload
+```
+
+---
+
+## localStorage Keys
+
+| Key | Purpose |
+|-----|---------|
+| `lunchbox-license` | License data {key, verified, date, email, deviceId} |
+| `lunchbox-trial-start` | Trial start timestamp |
+| `pakt-device-id` | Device fingerprint |
+| `lunchbox-children` | Children profiles array |
+| `lunchbox-weekPlan` | Weekly meal plans |
+| `lunchbox-rewards` | Custom rewards |
+| `lunchbox-favorites` | Favorite foods per child |
+| `lunchbox-chore-progress` | Chore completion status |
+| `lunchbox-custom-rewards` | User-created rewards |
+| `lunchbox-ate-all` | "Ate it all" tracking |
 
 ---
 
@@ -148,50 +245,9 @@ const LICENSE_CONFIG = {
 
 ---
 
-## API Endpoints (pakt-worker.js v3)
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/` | GET | Health check, returns version |
-| `/webhook` | POST | Receives Stripe payment events |
-| `/activate` | POST | Activate license on device |
-| `/validate` | GET | Simple key validation |
-| `/check-device` | GET | Check if device already activated |
-| `/lookup` | GET | Find license by email |
-| `/success` | GET | Get license by Stripe session |
-| `/deactivate` | POST | Remove device from license |
-
----
-
-## Deployment
-
-### GitHub → Cloudflare Pages (Automatic)
-1. Push to `dev` branch → Preview deploy
-2. Merge `dev` to `main` → Production deploy
-3. Live in ~30 seconds
-
-### Merge Process
-1. GitHub → Pull requests → New pull request
-2. base: `main` ← compare: `dev`
-3. Create pull request → Merge → Confirm
-
-### Worker Updates (Manual)
-1. Cloudflare Dashboard → Workers → pakt-api
-2. Edit Code → Paste new code → Deploy
-
----
-
-## Service Worker Updates
-
-When updating `sw.js`, **increment cache version**:
-```javascript
-const CACHE_NAME = 'pakt-v7'; // Was v6
-```
-
----
-
 ## Testing Commands (Browser Console)
 
+### Reset to Different States
 ```javascript
 // Fresh Trial (7 days)
 localStorage.clear(); sessionStorage.clear(); 
@@ -203,9 +259,74 @@ localStorage.clear(); sessionStorage.clear();
 localStorage.setItem('lunchbox-trial-start', (Date.now() - 10*24*60*60*1000).toString()); 
 location.reload();
 
+// Licensed User
+localStorage.setItem('lunchbox-license', JSON.stringify({
+  key:'PAKT-XXXX-XXXX-XXXX', verified:true, 
+  date:new Date().toISOString(), email:'test@test.com'
+})); 
+location.reload();
+
 // Nuclear Reset
 localStorage.clear(); sessionStorage.clear(); location.reload();
 ```
+
+### API Testing
+```javascript
+const API = 'https://pakt-api.oliveri-john001.workers.dev';
+
+// Health check
+fetch(API).then(r => r.json()).then(console.log);
+
+// Validate key
+fetch(API + '/validate?key=PAKT-XXXX-XXXX-XXXX').then(r => r.json()).then(console.log);
+
+// Email lookup
+fetch(API + '/lookup?email=test@test.com').then(r => r.json()).then(console.log);
+
+// Simulate webhook (creates test license)
+fetch(API + '/webhook', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    type: 'checkout.session.completed',
+    data: { object: { id: 'cs_test_' + Date.now(), customer_email: 'test@test.com' }}
+  })
+}).then(r => r.json()).then(console.log);
+```
+
+---
+
+## Deployment
+
+### GitHub → Cloudflare Pages (Automatic)
+1. Push to `dev` branch → Preview deploy
+2. Merge `dev` to `main` → Production deploy
+3. Live in ~30 seconds
+
+### Merge Process (No Commands)
+1. GitHub → Pull requests → New pull request
+2. base: `main` ← compare: `dev`
+3. Create pull request → Merge → Confirm
+
+### Worker Updates (Manual)
+1. Cloudflare Dashboard → Workers → pakt-api
+2. Edit Code → Paste new code → Deploy
+
+### Service Worker Updates
+When updating `sw.js`, **increment cache version**:
+```javascript
+const CACHE_NAME = 'pakt-v8'; // Increment from current
+```
+
+---
+
+## Known Considerations
+
+1. **Single-file architecture:** All React code in index.html - works but large
+2. **In-browser Babel:** Shows console warning (harmless)
+3. **Tailwind CDN:** Shows console warning (harmless)
+4. **Device fingerprinting:** Not 100% unique but good enough
+5. **No backend database:** All user data in localStorage (device-specific)
 
 ---
 
@@ -219,6 +340,11 @@ localStorage.clear(); sessionStorage.clear(); location.reload();
 | 0.5.2 | Dec 28, 2025 | Points system fix, chores enhancements |
 | 0.5.1 | Dec 27, 2025 | Per-category food points, avatar fix |
 | 0.5.0 | Dec 27, 2025 | Chores feature, kindness bonus |
+| 0.4.1 | Dec 27, 2025 | BentoIcon component |
+| 0.4.0 | Dec 27, 2025 | Custom rewards, weekly progress |
+| 0.3.0 | Dec 27, 2025 | Food database (187 items) |
+| 0.2.6 | Dec 27, 2025 | YUMMZ rebrand, 3-device license |
+| 0.2.5 | Dec 26, 2025 | PWA installation |
 
 ---
 
@@ -234,6 +360,7 @@ localStorage.clear(); sessionStorage.clear(); location.reload();
 - ✅ Restored category filters (Fresh, Dried, Cheese, etc.)
 - ✅ Restored filter UI in FoodSelectorModal
 - ✅ Added checkDietaryConflict function
+- ✅ Updated sw.js to v7
 
 **Root cause:** Working from outdated file instead of fetching latest
 
@@ -249,8 +376,10 @@ localStorage.clear(); sessionStorage.clear(); location.reload();
 
 ---
 
-## Contact
+## Contact & Accounts
 
-- **Support:** support@getpakt.app
+- **Support Email:** support@getpakt.app
 - **Domain:** Cloudflare (getpakt.app)
+- **Hosting:** Cloudflare Pages
 - **Payments:** Stripe
+- **Analytics:** Google Analytics (G-D98VXQ2XM2)
