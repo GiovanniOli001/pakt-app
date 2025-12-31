@@ -94,7 +94,7 @@ const BentoIcon = ({ size = 32, className = '' }) => (
 
 
 // App Version
-const APP_VERSION = '0.6.0';
+const APP_VERSION = '0.7.1';
 
 // Dietary Mode Presets
 const DIETARY_MODES = {
@@ -4797,6 +4797,17 @@ const ShoppingList = ({ weekPlan, children, onClose, onItemChecked }) => {
   const [checkedItems, setCheckedItems] = useState({});
   const [expandedCats, setExpandedCats] = useState({});
   
+  // Deep link helpers for supermarkets
+  const getWoolworthsLink = (itemName) => {
+    const encoded = encodeURIComponent(itemName);
+    return `https://www.woolworths.com.au/shop/search/products?searchTerm=${encoded}`;
+  };
+  
+  const getColesLink = (itemName) => {
+    const encoded = encodeURIComponent(itemName);
+    return `https://www.coles.com.au/search?q=${encoded}`;
+  };
+  
   // Handle checking an item
   const handleCheckItem = (itemKey) => {
     const wasChecked = checkedItems[itemKey];
@@ -4974,12 +4985,22 @@ const ShoppingList = ({ weekPlan, children, onClose, onItemChecked }) => {
       <div className="min-h-full flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg my-4 flex flex-col" style={{ maxHeight: 'calc(100vh - 32px)' }}>
           <div className="bg-gradient-to-r from-green-400 to-emerald-500 p-6 text-white rounded-t-3xl flex-shrink-0">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              🛒 Shopping List
-            </h2>
-            <p className="text-white/80 mt-1">
-              {totalItems} items to buy
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  🛒 Shopping List
+                </h2>
+                <p className="text-white/80 mt-1">
+                  {totalItems} items to buy
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-white/20 rounded-full transition-all"
+              >
+                ✕
+              </button>
+            </div>
           </div>
           
           <div className="flex-1 overflow-y-auto p-4 min-h-0">
@@ -5003,19 +5024,44 @@ const ShoppingList = ({ weekPlan, children, onClose, onItemChecked }) => {
                       {isOpen && (
                         <div className="px-3 pb-3 space-y-1">
                           {items.map(ing => (
-                            <button
-                              key={ing.key}
-                              onClick={() => handleCheckItem(ing.key)}
-                              className={`w-full flex items-center gap-3 p-2 rounded-xl ${checkedItems[ing.key] ? 'bg-green-50' : 'bg-white'}`}
-                            >
-                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${checkedItems[ing.key] ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300'}`}>
-                                {checkedItems[ing.key] && '✓'}
-                              </div>
-                              <span className={`flex-1 text-left ${checkedItems[ing.key] ? 'line-through text-gray-400' : 'text-gray-700'}`}>{ing.name}</span>
-                              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-sm">
-                                {formatPracticalQuantity(ing)}
-                              </span>
-                            </button>
+                            <div key={ing.key} className="bg-white rounded-xl overflow-hidden">
+                              <button
+                                onClick={() => handleCheckItem(ing.key)}
+                                className={`w-full flex items-center gap-3 p-2 ${checkedItems[ing.key] ? 'bg-green-50' : ''}`}
+                              >
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${checkedItems[ing.key] ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300'}`}>
+                                  {checkedItems[ing.key] && '✓'}
+                                </div>
+                                <span className={`flex-1 text-left ${checkedItems[ing.key] ? 'line-through text-gray-400' : 'text-gray-700'}`}>{ing.name}</span>
+                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-sm">
+                                  {formatPracticalQuantity(ing)}
+                                </span>
+                              </button>
+                              {/* Subtle supermarket links */}
+                              {!checkedItems[ing.key] && (
+                                <div className="flex gap-3 px-2 pb-2 pl-11">
+                                  <a
+                                    href={getWoolworthsLink(ing.name)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-xs text-gray-400 hover:text-green-600 transition-colors"
+                                  >
+                                    Woolies
+                                  </a>
+                                  <span className="text-gray-300">•</span>
+                                  <a
+                                    href={getColesLink(ing.name)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-xs text-gray-400 hover:text-red-600 transition-colors"
+                                  >
+                                    Coles
+                                  </a>
+                                </div>
+                              )}
+                            </div>
                           ))}
                         </div>
                       )}
