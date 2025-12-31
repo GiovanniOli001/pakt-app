@@ -334,7 +334,8 @@ const CACHE_NAME = 'pakt-v8'; // Increment from current
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **0.7.0** | **Dec 31, 2025** | **Restored: Google Analytics, food filters, 309 food items, trackEvent calls** |
+| **0.7.1** | **Dec 31, 2025** | **Added per-item supermarket links to shopping list (Woolies/Coles)** |
+| 0.7.0 | Dec 31, 2025 | Restored: Google Analytics, food filters, 309 food items, trackEvent calls |
 | 0.6.0 | Dec 28, 2025 | PAKT rebrand, Stripe payments, device limiting |
 | 0.5.3 | Dec 28, 2025 | Food database expansion (241 items) |
 | 0.5.2 | Dec 28, 2025 | Points system fix, chores enhancements |
@@ -361,6 +362,11 @@ const CACHE_NAME = 'pakt-v8'; // Increment from current
 - ✅ Restored filter UI in FoodSelectorModal
 - ✅ Added checkDietaryConflict function
 - ✅ Updated sw.js to v7
+
+**New Feature (v0.7.1):**
+- ✅ Supermarket deep links in shopping list
+- ✅ Subtle per-item links (Woolies • Coles) under each ingredient
+- Links open product search in new tab
 
 **Root cause:** Working from outdated file instead of fetching latest
 
