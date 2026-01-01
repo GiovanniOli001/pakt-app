@@ -6732,6 +6732,7 @@ const RewardsModal = ({ rewards, onAddReward, onDeleteReward, onRedeemReward, ch
 // More Menu Component
 // Benny's Bonus Round - Math mini-game after completing chores
 const BonusRoundGame = ({ child, basePoints, onComplete, onSkip }) => {
+  const [gameStarted, setGameStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(20);
   const [score, setScore] = useState(0);
   const [question, setQuestion] = useState(null);
@@ -6819,14 +6820,15 @@ const BonusRoundGame = ({ child, basePoints, onComplete, onSkip }) => {
     };
   };
   
-  // Initialize first question
-  useEffect(() => {
+  // Start the game
+  const handleStartGame = () => {
     setQuestion(generateQuestion());
-  }, []);
+    setGameStarted(true);
+  };
   
-  // Timer countdown
+  // Timer countdown - only runs after game started
   useEffect(() => {
-    if (gameOver || !question) return;
+    if (!gameStarted || gameOver || !question) return;
     
     const timer = setInterval(() => {
       setTimeLeft(prev => {
@@ -6839,7 +6841,7 @@ const BonusRoundGame = ({ child, basePoints, onComplete, onSkip }) => {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [gameOver, question]);
+  }, [gameStarted, gameOver, question]);
   
   // Handle answer selection
   const handleAnswer = (selected) => {
@@ -6863,6 +6865,7 @@ const BonusRoundGame = ({ child, basePoints, onComplete, onSkip }) => {
   
   // Benny messages
   const getBennyMessage = () => {
+    if (!gameStarted) return "Ready to play?";
     if (gameOver) {
       if (score === 0) return "Nice try! You still got your chore points!";
       if (score <= 2) return "Good effort! Here's your bonus!";
@@ -6894,7 +6897,7 @@ const BonusRoundGame = ({ child, basePoints, onComplete, onSkip }) => {
           <h2 className="text-2xl font-bold text-white drop-shadow-lg">
             🎲 Benny's Bonus Round!
           </h2>
-          {!gameOver && (
+          {gameStarted && !gameOver && (
             <div className="mt-2 flex justify-center gap-4">
               <span className="bg-white/90 px-4 py-1 rounded-full font-bold text-sky-600">
                 ⏱️ {timeLeft}s
@@ -6908,7 +6911,31 @@ const BonusRoundGame = ({ child, basePoints, onComplete, onSkip }) => {
         
         {/* Game Area */}
         <div className="flex-1 flex flex-col items-center justify-center">
-          {!gameOver ? (
+          {!gameStarted ? (
+            /* Start Screen */
+            <div className="bg-white rounded-3xl shadow-2xl p-8 text-center max-w-sm">
+              <div className="text-6xl mb-4">🎉</div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">Lucky You!</h3>
+              <p className="text-gray-600 mb-2">
+                {child?.name || 'You'} unlocked a bonus round!
+              </p>
+              <p className="text-gray-500 text-sm mb-6">
+                Answer math questions in 20 seconds to earn up to 10 bonus points!
+              </p>
+              <button
+                onClick={handleStartGame}
+                className="w-full py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white text-xl font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105 mb-3"
+              >
+                ▶️ START!
+              </button>
+              <button
+                onClick={onSkip}
+                className="text-gray-400 hover:text-gray-600 text-sm font-medium"
+              >
+                No thanks, just my {basePoints} chore points
+              </button>
+            </div>
+          ) : !gameOver ? (
             <>
               {/* Question */}
               <div className="bg-white rounded-3xl shadow-2xl p-6 mb-6 min-w-[280px]">
@@ -6976,8 +7003,8 @@ const BonusRoundGame = ({ child, basePoints, onComplete, onSkip }) => {
           </div>
         </div>
         
-        {/* Skip button - only before game over */}
-        {!gameOver && (
+        {/* Skip button - only during active gameplay */}
+        {gameStarted && !gameOver && (
           <div className="text-center">
             <button
               onClick={onSkip}
