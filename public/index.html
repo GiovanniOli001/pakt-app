@@ -7738,6 +7738,8 @@ function LunchboxApp() {
   });
   const [showRewards, setShowRewards] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showRefundPolicy, setShowRefundPolicy] = useState(false);
   
   // Bonus Round state
   const [bonusRoundEnabled, setBonusRoundEnabled] = useState(() => {
@@ -8801,17 +8803,204 @@ function LunchboxApp() {
             <p className="text-gray-600 mb-4">Reach out to us anytime:</p>
             <a
               href="mailto:support@getpakt.app"
-              className="inline-block px-6 py-3 bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold rounded-xl hover:shadow-lg transition-all mb-4"
+              className="inline-block w-full px-6 py-3 bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold rounded-xl hover:shadow-lg transition-all mb-3"
             >
               ✉️ support@getpakt.app
             </a>
             <p className="text-xs text-gray-400 mb-4">We typically respond within 24 hours</p>
+            
+            <div className="border-t border-gray-200 pt-4 mt-2 space-y-2">
+              <button
+                onClick={() => { setShowSupportModal(false); setShowPrivacyPolicy(true); }}
+                className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors text-sm"
+              >
+                📄 Privacy Policy
+              </button>
+              <button
+                onClick={() => { setShowSupportModal(false); setShowRefundPolicy(true); }}
+                className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors text-sm"
+              >
+                💰 Refund Policy
+              </button>
+            </div>
+            
             <button
               onClick={() => setShowSupportModal(false)}
-              className="w-full py-2 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors"
+              className="w-full py-2 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors mt-3"
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Privacy Policy Modal */}
+      {showPrivacyPolicy && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-800">📄 Privacy Policy</h3>
+              <button
+                onClick={() => setShowPrivacyPolicy(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 text-left text-sm text-gray-700 space-y-4">
+              <p className="text-xs text-gray-400">Last Updated: January 2025</p>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">Overview</h4>
+                <p>PAKT ("the App") is a family lunchbox and chore planning app created by an independent Australian developer. We take your privacy seriously and are committed to protecting your personal information.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">What We Collect</h4>
+                <p className="font-medium mt-2">Information You Provide:</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Children's profiles: Names, ages, and avatars you create</li>
+                  <li>Meal plans: Lunchbox selections and food preferences</li>
+                  <li>Chore data: Chores assigned, completion status, and points earned</li>
+                  <li>Email address: Only if you purchase a license</li>
+                </ul>
+                <p className="font-medium mt-2">Information Collected Automatically:</p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Analytics data via Google Analytics (pages viewed, session duration, general location, device type)</li>
+                  <li>Device identifier for license validation</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">Where Your Data Is Stored</h4>
+                <p><strong>On your device:</strong> All personal data (children's profiles, meal plans, chores, points) is stored locally on your device. This data never leaves your device.</p>
+                <p className="mt-2"><strong>On our servers:</strong> We only store license information (email, license key, device ID) for customers who purchase the App.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">What We Don't Do</h4>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>We do not sell your data</li>
+                  <li>We do not share personal information with third parties for marketing</li>
+                  <li>We do not collect precise location data</li>
+                  <li>We do not store your children's information on our servers</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">Third-Party Services</h4>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li><strong>Google Analytics:</strong> Used for anonymous usage statistics</li>
+                  <li><strong>Stripe:</strong> Processes payments securely</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">Children's Privacy</h4>
+                <p>PAKT is designed for parents to manage family activities. While parents may enter children's names and ages, this information is stored only on the parent's device and is not transmitted to us.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">Your Rights</h4>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li>Delete your data anytime using "Clear All Data" in the App</li>
+                  <li>Request deletion of your license information by contacting us</li>
+                  <li>Opt out of analytics using browser privacy settings</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">Contact Us</h4>
+                <p>For privacy questions: <strong>support@getpakt.app</strong></p>
+              </div>
+              
+              <p className="text-center text-gray-400 pt-4">🇦🇺 Made in Australia</p>
+            </div>
+            <div className="p-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowPrivacyPolicy(false)}
+                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Refund Policy Modal */}
+      {showRefundPolicy && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-800">💰 Refund Policy</h3>
+              <button
+                onClick={() => setShowRefundPolicy(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 text-left text-sm text-gray-700 space-y-4">
+              <p className="text-xs text-gray-400">Last Updated: January 2025</p>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">Free Trial</h4>
+                <p>PAKT offers a <strong>7-day free trial</strong> with full access to all features. This trial period allows you to thoroughly evaluate the App before making a purchase decision.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">Purchase Policy</h4>
+                <p>Due to the generous free trial period, <strong>all purchases are final and non-refundable</strong>.</p>
+                <p className="mt-2">Price: $3.99 AUD (one-time payment, lifetime access)</p>
+              </div>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">Exceptions</h4>
+                <p>We will provide a full refund in the following circumstances:</p>
+                
+                <p className="font-medium mt-3">Technical Failure</p>
+                <p>If a bug or technical issue causes permanent inability to access or use the service, and we are unable to resolve the issue within 14 days, you are entitled to a full refund.</p>
+                
+                <p className="font-medium mt-3">Duplicate Purchase</p>
+                <p>If you accidentally purchased the App multiple times, we will refund the duplicate transactions.</p>
+                
+                <p className="font-medium mt-3">Unauthorised Purchase</p>
+                <p>If a purchase was made without your authorisation (e.g., by a child), contact us within 48 hours of the transaction.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">How to Request a Refund</h4>
+                <p>Email <strong>support@getpakt.app</strong> with:</p>
+                <ul className="list-disc ml-5 space-y-1 mt-2">
+                  <li>Your purchase email address</li>
+                  <li>Date of purchase</li>
+                  <li>Description of the issue</li>
+                  <li>Any relevant screenshots</li>
+                </ul>
+                <p className="mt-2">We aim to respond within 3 business days.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">Australian Consumer Law</h4>
+                <p>Nothing in this policy limits your rights under Australian Consumer Law. If the App has a major failure or cannot be fixed, you may be entitled to a refund regardless of this policy.</p>
+              </div>
+              
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">Contact Us</h4>
+                <p>For refund enquiries: <strong>support@getpakt.app</strong></p>
+              </div>
+              
+              <p className="text-center text-gray-400 pt-4">🇦🇺 Made in Australia</p>
+            </div>
+            <div className="p-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowRefundPolicy(false)}
+                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
